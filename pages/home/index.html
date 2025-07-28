@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .old-standard-tt-regular {
+      font-family: "Old Standard TT", serif;
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    .old-standard-tt-bold {
+      font-family: "Old Standard TT", serif;
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    .old-standard-tt-regular-italic {
+      font-family: "Old Standard TT", serif;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .main-container {
+      padding: 0 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+
+      & a {
+        color: white;
+        text-decoration: none;
+        transition: color 150ms;
+
+        &:hover {
+          color: #121212;
+        }
+      }
+    }
+  </style>
+  <title>потерпевшие</title>
+</head>
+<body>
+<main class="main-container">
+  <h1 class="old-standard-tt-regular">
+    <a title="место обитания" target="_blank" href="https://t.me/terpevshie">потерпевшие.</a>
+  </h1>
+</main>
+</body>
+<script>
+  VANTA.FOG({
+    el: "body",
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    minHeight: 200.00,
+    minWidth: 200.00,
+    highlightColor: 0x0,
+    midtoneColor: 0xb1b1b1,
+    lowlightColor: 0x9d9d9d,
+    baseColor: 0x414141,
+    blurFactor: 0.48,
+    speed: 0.00,
+    zoom: 1.80
+  })
+</script>
+</html>
