@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+  <title>потерпевшие - слово</title>
+</head>
+<style>
+  .font-regular {
+    font-family: "Old Standard TT", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .font-bold {
+    font-family: "Old Standard TT", serif;
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  .font-italic {
+    font-family: "Old Standard TT", serif;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    position: relative;
+    background-color: #151a24;
+    color: white;
+    height: 100vh;
+  }
+
+  nav a {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+  }
+
+  #logo-img {
+    max-width: 80px;
+    max-height: 80px;
+    opacity: 0.8;
+    transition: opacity 400ms ease-in-out;
+  }
+
+  #logo-img:hover {
+    opacity: 1;
+  }
+
+  main {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #texts-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .text-fragment {
+    position: absolute;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  #release-card {
+    position: relative;
+    z-index: 10;
+    max-width: 600px;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  #release-card h1 {
+    margin: 0 1rem;
+    font-size: 2rem;
+  }
+
+  .hoverable-img {
+    transition: transform 0.3s ease;
+    transform-origin: center center;
+  }
+
+  .hoverable-img:hover {
+    transform: scale(1.03);
+  }
+
+  #cover-img {
+    cursor: pointer;
+    height: 100%;
+    width: 100%;
+    max-width: 500px;
+    max-height: 500px;
+  }
+
+  #progress-bar-wrapper.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  #progress-bar-wrapper {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+</style>
+<body>
+<div id="texts-container"></div>
+<nav>
+  <a id="home-button" title="на главную" href="https://terpevshie.ru">
+    <img id="logo-img" class="hoverable-img" alt="лого потерпевших" src="logo.png">
+  </a>
+</nav>
+<main class="font-regular">
+  <div id="release-card">
+    <img id="cover-img" class="hoverable-img" src="word.jpg" alt="обложка">
+    <!--    <h1>потерпевшие - слово</h1>-->
+    <audio id="bg-audio" src="word.mp3"></audio>
+    <div id="progress-bar-wrapper" class="hidden"
+         style="width: 100%; height: 6px; background: #2b2e38; margin-top: 1rem;">
+      <div id="progress-bar" style="height: 100%; width: 0; background: #223f77; transition: width 0.2s;"></div>
+    </div>
+  </div>
+</main>
+</body>
+<script>
+  const audio = document.getElementById('bg-audio');
+  const cover = document.getElementById('cover-img');
+
+  cover.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  function fadeOutAudio(audio, duration = 1000) {
+    const stepTime = 50;
+    const steps = duration / stepTime;
+    const initialVolume = audio.volume;
+    let currentStep = 0;
+
+    const fade = setInterval(() => {
+      currentStep++;
+      const newVolume = initialVolume * (1 - currentStep / steps);
+      audio.volume = Math.max(0, newVolume);
+
+      if (currentStep >= steps) {
+        clearInterval(fade);
+        audio.pause();
+        audio.volume = initialVolume; // сброс
+      }
+    }, stepTime);
+  }
+
+  cover.addEventListener('click', () => {
+    if (audio.paused) {
+      audio.play().catch(err => {
+        console.log('Autoplay failed:', err);
+      });
+    } else {
+      fadeOutAudio(audio, 500);  // 1 секунда затухания
+    }
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    const percent = (audio.currentTime / audio.duration) * 100;
+    document.getElementById('progress-bar').style.width = `${percent}%`;
+  });
+
+  const progressWrapper = document.getElementById('progress-bar-wrapper');
+
+  audio.addEventListener('play', () => {
+    progressWrapper.classList.remove('hidden');
+  });
+
+  audio.addEventListener('pause', () => {
+    progressWrapper.classList.add('hidden');
+  });
+
+  audio.addEventListener('ended', () => {
+    progressWrapper.classList.add('hidden');
+  });
+
+  /* VISUAL EFFECTS */
+
+  const strings = [
+    'слово режь, слово бей',
+    'слово, слово, режь глубже, глубже',
+    'режь, режиссер, покажи километры лжи',
+    'круг, крик и снова'
+  ]
+
+  function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  function createTextElement(text, top, left, fontSize, opacity) {
+    const el = document.createElement('div');
+    el.className = 'text-fragment';
+    el.style.top = `${top}px`;
+    el.style.left = `${left}px`;
+    el.style.fontSize = `${fontSize}px`;
+    el.style.opacity = opacity;
+    el.textContent = '';
+    const fadeDuration = getRandom(500, 2000);
+    el.style.transition = `opacity ${fadeDuration}ms ease-out`;
+    document.getElementById('texts-container').appendChild(el);
+    return el;
+  }
+
+  function typeText(el, text, delay) {
+    return new Promise(resolve => {
+      let i = 0;
+      const interval = setInterval(() => {
+        el.textContent += text[i++];
+        if (i >= text.length) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, delay);
+    });
+  }
+
+  function measureTextWidth(text, fontSize, fontClass = "font-regular") {
+    const temp = document.createElement('div');
+    temp.className = `text-fragment ${fontClass}`;
+    temp.style.fontSize = `${fontSize}px`;
+    temp.style.position = 'absolute';
+    temp.style.whiteSpace = 'nowrap';
+    temp.style.opacity = '0';
+    temp.textContent = text;
+    document.body.appendChild(temp);
+    const width = temp.getBoundingClientRect().width;
+    temp.remove();
+    return width;
+  }
+
+  const usedAreas = [];
+
+  function doesOverlap(a, b) {
+    return !(
+      a.left + a.width < b.left ||
+      b.left + b.width < a.left ||
+      a.top + a.height < b.top ||
+      b.top + b.height < a.top
+    );
+  }
+
+  function getSafePosition(text, fontSize) {
+    const textWidth = measureTextWidth(text, fontSize);
+    const textHeight = fontSize * 1.3;
+
+    const maxLeft = Math.max(0, window.innerWidth - textWidth);
+    const maxTop = Math.max(0, window.innerHeight - textHeight);
+
+    const avoidBox = {
+      left: window.innerWidth / 2 - 250,
+      top: window.innerHeight / 2 - 250,
+      width: 500,
+      height: 500
+    };
+
+    let attempts = 0;
+    while (attempts < 50) {
+      const left = getRandom(0, maxLeft);
+      const top = getRandom(0, maxTop);
+
+      const box = {left, top, width: textWidth, height: textHeight};
+
+      const overlapsUsed = usedAreas.some(area => doesOverlap(area, box));
+      const overlapsCenter = doesOverlap(avoidBox, box);
+
+      const allowCenter = Math.random() < 0.1; // 10% шанс попасть в центр
+
+      if (!overlapsUsed && (!overlapsCenter || allowCenter)) {
+        usedAreas.push(box);
+        return {top, left};
+      }
+
+      attempts++;
+    }
+
+    // Если не нашли подходящее место — всё равно возвращаем (возможно, будет наезд)
+    const fallbackLeft = getRandom(0, maxLeft);
+    const fallbackTop = getRandom(0, maxTop);
+    return {top: fallbackTop, left: fallbackLeft};
+  }
+
+  async function runCycle() {
+    const text = strings[Math.floor(Math.random() * strings.length)];
+    const count = Math.floor(getRandom(3, 5));
+    const delay = getRandom(60, 120); // typing speed per character
+
+    const promises = [];
+    usedAreas.length = 0; // очищаем перед новым циклом
+
+    for (let i = 0; i < count; i++) {
+      const fontSize = getRandom(30, 60);
+      const opacity = getRandom(0.3, 0.9);
+      const fadeDuration = getRandom(500, 2000);
+
+      const {top, left} = getSafePosition(text, fontSize);
+
+      const el = createTextElement(text, top, left, fontSize, opacity);
+      el.style.transition = `opacity ${fadeDuration}ms ease-out`;
+
+      promises.push(
+        typeText(el, text, delay).then(() => {
+          setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 2000);
+          }, 2000);
+        })
+      );
+    }
+
+    await Promise.all(promises);
+    setTimeout(runCycle, getRandom(1000, 5000));  // wait before next cycle
+  }
+
+  runCycle();
+
+</script>
+</html>
