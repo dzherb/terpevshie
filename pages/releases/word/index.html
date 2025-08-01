@@ -38,20 +38,42 @@
     position: relative;
     background-color: #151a24;
     color: white;
-    height: 100vh;
+    min-height: 100vh;
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: background-image 1s ease-in-out;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    background: rgba(21, 26, 36, 0.6);
+    pointer-events: none;
   }
 
   nav a {
-    position: absolute;
+    position: fixed;
+    z-index: 3;
     top: 0.5rem;
     left: 0.5rem;
+  }
+
+  img {
+    user-select: none;
   }
 
   #logo-img {
     max-width: 80px;
     max-height: 80px;
     opacity: 0.8;
-    transition: opacity 400ms ease-in-out;
+    transition: opacity 0.3s ease-in-out;
   }
 
   #logo-img:hover {
@@ -59,20 +81,20 @@
   }
 
   main {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
   #texts-container {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
   }
 
@@ -84,6 +106,7 @@
 
   #release-card {
     position: relative;
+    margin: 2rem;
     z-index: 10;
     max-width: 600px;
     max-height: 600px;
@@ -113,6 +136,18 @@
     width: 100%;
     max-width: 500px;
     max-height: 500px;
+    box-shadow: 0 0 50px rgba(21, 26, 36, 0.6);
+    border-radius: 1rem;
+  }
+
+  #progress-bar-wrapper {
+    width: 100%;
+    border-radius: 1rem;
+    height: 6px;
+    background: #2b2e38;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    opacity: 1;
+    transition: opacity, color 0.3s ease;
   }
 
   #progress-bar-wrapper.hidden {
@@ -121,26 +156,34 @@
     transition: opacity 0.3s ease;
   }
 
-  #progress-bar-wrapper {
-    opacity: 1;
-    transition: opacity 0.3s ease;
+  #progress-bar {
+    border-radius: 1rem;
+    height: 100%;
+    width: 0;
+    background: #1d55c3;
+    transition: width 0.2s;
+  }
+
+  #platforms-container {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 </style>
 <body>
 <div id="texts-container"></div>
 <nav>
-  <a id="home-button" title="на главную" href="https://terpevshie.ru">
+  <a id="home-button" title="на главную" href="/">
     <img id="logo-img" class="hoverable-img" alt="лого потерпевших" src="logo.png">
   </a>
 </nav>
 <main class="font-regular">
   <div id="release-card">
+    <h1>потерпевшие - слово</h1>
     <img id="cover-img" class="hoverable-img" src="word.jpg" alt="обложка">
-    <!--    <h1>потерпевшие - слово</h1>-->
     <audio id="bg-audio" src="word.mp3"></audio>
-    <div id="progress-bar-wrapper" class="hidden"
-         style="width: 100%; height: 6px; background: #2b2e38; margin-top: 1rem;">
-      <div id="progress-bar" style="height: 100%; width: 0; background: #223f77; transition: width 0.2s;"></div>
+    <div id="progress-bar-wrapper" class="hidden">
+      <div id="progress-bar"></div>
     </div>
   </div>
 </main>
@@ -202,15 +245,17 @@
   /* VISUAL EFFECTS */
 
   const strings = [
-    'слово режь, слово бей',
-    'слово, слово, режь глубже, глубже',
-    'режь, режиссер, покажи километры лжи',
-    'круг, крик и снова'
+    ['слово, режь, слово, бей', 'word, cut, word, beat', 'слова, рэж, слова, бі',],
+    ['слово, слово, режь глубже, глубже', 'word, word, cut deeper', 'Wort, Wort, schneide tiefer', '單字，單字，切得更深'],
+    ['режь, режиссер, покажи километры лжи', 'cut, director, show kilometers of lies', 'klipp, regissør, vis kilometervis med løgner', 'potong, sutradara, tunjukkan kilometer kebohongan', 'カット、監督、何キロメートルもの嘘を見せろ'],
+    ['круг, крик и снова', 'cerchju, gridà è torna', 'चक्कर लगावा, चिल्लावा अऊर फिर से', 'rondo, krio kaj denove']
   ]
 
   function getRandom(min, max) {
     return Math.random() * (max - min) + min;
   }
+
+  const textClasses = ['font-italic', 'font-bold'];
 
   function createTextElement(text, top, left, fontSize, opacity) {
     const el = document.createElement('div');
@@ -220,8 +265,13 @@
     el.style.fontSize = `${fontSize}px`;
     el.style.opacity = opacity;
     el.textContent = '';
-    const fadeDuration = getRandom(500, 2000);
-    el.style.transition = `opacity ${fadeDuration}ms ease-out`;
+    el.style.transition = `opacity ${getRandom(500, 2000)}ms ease-out`;
+
+    if (Math.random() < 0.3) {
+      const randomClass = textClasses[Math.floor(Math.random() * textClasses.length)];
+      el.classList.add(randomClass);
+    }
+
     document.getElementById('texts-container').appendChild(el);
     return el;
   }
@@ -305,16 +355,28 @@
   }
 
   async function runCycle() {
-    const text = strings[Math.floor(Math.random() * strings.length)];
-    const count = Math.floor(getRandom(3, 5));
-    const delay = getRandom(60, 120); // typing speed per character
+    const width = window.innerWidth;
+
+    let count
+    if (width < 500) {
+      count = Math.floor(getRandom(2, 8));
+    } else if (width < 900) {
+      count = Math.floor(getRandom(5, 15));
+    } else {
+      count = Math.floor(getRandom(10, 30));
+    }
+
+    const typingDelay = getRandom(60, 120);
 
     const promises = [];
     usedAreas.length = 0; // очищаем перед новым циклом
 
+    const seriesIndex = Math.floor(getRandom(0, strings.length));
     for (let i = 0; i < count; i++) {
+      const text = strings[seriesIndex][Math.floor(Math.random() * strings[seriesIndex].length)];
+
       const fontSize = getRandom(30, 60);
-      const opacity = getRandom(0.3, 0.9);
+      const opacity = getRandom(0.1, 0.6);
       const fadeDuration = getRandom(500, 2000);
 
       const {top, left} = getSafePosition(text, fontSize);
@@ -323,20 +385,37 @@
       el.style.transition = `opacity ${fadeDuration}ms ease-out`;
 
       promises.push(
-        typeText(el, text, delay).then(() => {
-          setTimeout(() => {
-            el.style.opacity = '0';
-            setTimeout(() => el.remove(), 2000);
-          }, 2000);
-        })
+        setTimeout(() => {
+          typeText(el, text, typingDelay).then(() => {
+            setTimeout(() => {
+              el.style.opacity = '0';
+              setTimeout(() => el.remove(), 2000);
+            }, 2000);
+          })
+        }, getRandom(0, 2000))
       );
     }
 
     await Promise.all(promises);
-    setTimeout(runCycle, getRandom(1000, 5000));  // wait before next cycle
+    setTimeout(runCycle, getRandom(1000, 8000));
   }
 
   runCycle();
 
+  /* BACKGROUND */
+
+  const images = [
+    'slides/cover.jpg',
+    // Можно добавить еще
+  ];
+
+  function setRandomBackground() {
+    const randomImage = images[Math.floor(Math.random() * images.length)];
+    document.body.style.backgroundImage = `url(${randomImage})`;
+  }
+
+  setRandomBackground();
+
+  setInterval(setRandomBackground, getRandom(4000, 10000));
 </script>
 </html>
