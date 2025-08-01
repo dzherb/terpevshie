@@ -106,7 +106,7 @@
 
   #release-card {
     position: relative;
-    margin: 2rem;
+    margin: 4.6rem 2rem;
     z-index: 10;
     max-width: 600px;
     max-height: 600px;
@@ -114,19 +114,19 @@
     flex-direction: column;
     align-items: center;
     gap: 1.5rem;
+
+    & h1 {
+      margin: 0 1rem;
+      font-size: 2.5rem;
+    }
   }
 
-  #release-card h1 {
-    margin: 0 1rem;
-    font-size: 2rem;
-  }
-
-  .hoverable-img {
+  .hover-scale {
     transition: transform 0.3s ease;
     transform-origin: center center;
   }
 
-  .hoverable-img:hover {
+  .hover-scale:hover {
     transform: scale(1.03);
   }
 
@@ -143,47 +143,65 @@
   #progress-bar-wrapper {
     width: 100%;
     border-radius: 1rem;
-    height: 6px;
+    min-height: 6px;
     background: #2b2e38;
     box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
     opacity: 1;
     transition: opacity, color 0.3s ease;
-  }
 
-  #progress-bar-wrapper.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
   }
 
   #progress-bar {
     border-radius: 1rem;
-    height: 100%;
+    min-height: 6px;
     width: 0;
     background: #1d55c3;
     transition: width 0.2s;
   }
 
   #platforms-container {
+    width: 100%;
     display: flex;
+    justify-content: space-evenly;
     align-items: center;
     gap: 1.5rem;
+
+    & a {
+      color: white;
+      text-decoration: none;
+
+      &:visited {
+        color: white;
+      }
+    }
   }
 </style>
 <body>
 <div id="texts-container"></div>
 <nav>
   <a id="home-button" title="на главную" href="/">
-    <img id="logo-img" class="hoverable-img" alt="лого потерпевших" src="logo.png">
+    <img id="logo-img" class="hover-scale" alt="лого потерпевших" src="logo.png">
   </a>
 </nav>
 <main class="font-regular">
   <div id="release-card">
     <h1>потерпевшие - слово</h1>
-    <img id="cover-img" class="hoverable-img" src="word.jpg" alt="обложка">
+    <img id="cover-img" class="hover-scale" src="word.jpg" alt="обложка">
     <audio id="bg-audio" src="word.mp3"></audio>
     <div id="progress-bar-wrapper" class="hidden">
       <div id="progress-bar"></div>
+    </div>
+    <div id="platforms-container">
+      <a class="hover-scale" target="_blank" href="https://music.yandex.com/album/37642175">яндекс</a>
+      <a class="hover-scale" target="_blank" href="https://vk.com/wall-220989745_35">vk</a>
+      <a class="hover-scale" target="_blank" href="https://open.spotify.com/track/110HRXaO5jHWax28gzmPlK">spotify</a>
+      <a class="hover-scale" target="_blank" href="https://music.apple.com/ru/album/%D1%81%D0%BB%D0%BE%D0%B2%D0%BE/1830292233">apple</a>
+      <a class="hover-scale" target="_blank" href="https://youtu.be/RkK67uu87pM">youtube</a>
     </div>
   </div>
 </main>
@@ -245,10 +263,12 @@
   /* VISUAL EFFECTS */
 
   const strings = [
-    ['слово, режь, слово, бей', 'word, cut, word, beat', 'слова, рэж, слова, бі',],
+    ['слово, режь, слово, бей', 'word, cut, word, beat', 'слова, рэж, слова, бі', 'vārds, griezums, vārds, pārspēt', 'คำ,ตัด,คำ,จังหวะ'],
     ['слово, слово, режь глубже, глубже', 'word, word, cut deeper', 'Wort, Wort, schneide tiefer', '單字，單字，切得更深'],
     ['режь, режиссер, покажи километры лжи', 'cut, director, show kilometers of lies', 'klipp, regissør, vis kilometervis med løgner', 'potong, sutradara, tunjukkan kilometer kebohongan', 'カット、監督、何キロメートルもの嘘を見せろ'],
-    ['круг, крик и снова', 'cerchju, gridà è torna', 'चक्कर लगावा, चिल्लावा अऊर फिर से', 'rondo, krio kaj denove']
+    ['круг, крик и снова', 'cerchju, gridà è torna', 'चक्कर लगावा, चिल्लावा अऊर फिर से', 'rondo, krio kaj denove', 'un cerc, un țipăt și din nou'],
+    ['всё потеряли и устали мы', 'hər şeyi itirdik və yorulduq', 'mēs visi esam zaudējuši un noguruši', 'మేము ప్రతిదీ కోల్పోయాము మరియు మేము అలసిపోయాము'],
+    ['словно меж двух огней я зажат меж дверей', 'wéi wann ech tëscht zwee Luuchten tëscht Dieren agespaart wier', 'әйтерһең дә ике ут араһында мин ишек араһында ҡыҫылам', 'comme entre deux lumières, je suis coincé entre les portes'],
   ]
 
   function getRandom(min, max) {
@@ -359,11 +379,11 @@
 
     let count
     if (width < 500) {
-      count = Math.floor(getRandom(2, 8));
+      count = Math.floor(getRandom(2, 5));
     } else if (width < 900) {
       count = Math.floor(getRandom(5, 15));
     } else {
-      count = Math.floor(getRandom(10, 30));
+      count = Math.floor(getRandom(5, 30));
     }
 
     const typingDelay = getRandom(60, 120);
