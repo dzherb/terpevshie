@@ -2,16 +2,20 @@
 
 set -euo pipefail
 
-echo "🔍 Searching for .html files..."
+echo "🔍 Searching for .jinja files..."
 
-find . -type f -name "*.html" ! -name "*.min.html" | while read -r file; do
+find pages -type f -name "*.jinja2" ! -name "*.html" | while read -r file; do
   dir=$(dirname "$file")
-  base=$(basename "$file" .html)
-  out="$dir/$base.min.html"
+  base=$(basename "$file" .jinja2)
+  out="$dir/$base.html"
 
-  echo "⚙️  Minifying: $file → $out"
+  echo "⚙️  Rendering: $file → $out"
 
-  npx --yes html-minifier-terser "$file" \
+  minijinja-cli $file > $out
+
+  echo "⚙️  Minifying: $out"
+
+  npx --yes html-minifier-terser "$out" \
     --collapse-whitespace \
     --remove-comments \
     --minify-css true \
@@ -21,4 +25,4 @@ find . -type f -name "*.html" ! -name "*.min.html" | while read -r file; do
   echo "✅  Done: $out"
 done
 
-echo "🏁 All HTML files have been minified."
+echo "🏁 All HTML files have been built."
