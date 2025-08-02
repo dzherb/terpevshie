@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Слушайте бесплатно композицию &quot;слово&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Песня доступна на всех площадках.">
+  <title>потерпевшие - слово</title>
+  <meta name="description"
+        content="Слушайте бесплатно композицию &quot;слово&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Песня доступна на всех площадках.">
   <meta property="og:title" content="потерпевшие - слово">
   <meta property="og:description" content="слушать без смс и регистрации">
   <meta property="og:image" content="https://terpevshie.ru/releases/word/cover.webp">
@@ -13,9 +15,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
         rel="stylesheet">
-  <title>потерпевшие - слово</title>
 </head>
 <style>
+  @view-transition {
+    navigation: auto;
+  }
+
+  @keyframes move-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes move-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  ::view-transition-old(root) {
+    animation: 0.3s ease-in both move-out;
+  }
+
+  ::view-transition-new(root) {
+    animation: 0.3s ease-in both move-in;
+  }
+
   .font-regular {
     font-family: "Old Standard TT", serif;
     font-weight: 400;
