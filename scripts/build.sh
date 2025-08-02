@@ -14,7 +14,6 @@ find . -type f -name "*.html" ! -name "*.min.html" | while read -r file; do
   npx --yes html-minifier-terser "$file" \
     --collapse-whitespace \
     --remove-comments \
-    --remove-optional-tags \
     --minify-css true \
     --minify-js true \
     -o "$out" 2> /dev/null
