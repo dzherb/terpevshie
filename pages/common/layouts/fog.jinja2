@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>потерпевшие</title>
+  <title>{% block title %}{% endblock %}</title>
   <meta property="og:title" content="потерпевшие">
   <meta property="og:description" content="музыка из другого мира">
-  <meta property="og:image" content="https://terpevshie.ru/common/images/logo.png">
+  <meta property="og:image" content="https://terpevshie.ru/home/logo.png">
   <meta property="og:url" content="https://terpevshie.ru">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
   <style>
-    {% include '../common/includes/view_transition.css' %}
+    {% include '../includes/view_transition.css' %}
 
     body {
       padding: 0;
@@ -47,16 +47,20 @@
       transition: color 150ms;
     }
 
+    .main-container h1 {
+      font-weight: normal;
+    }
+
     .main-container a:hover {
       color: #121212;
     }
+
+    {% block extra_styles %}{% endblock %}
   </style>
 </head>
 <body>
-<main class="main-container">
-  <h1 class="old-standard-tt-regular">
-    <a title="место обитания" target="_blank" href="https://t.me/terpevshie">потерпевшие.</a>
-  </h1>
+<main class="main-container old-standard-tt-regular">
+  {% block main %}{% endblock %}
 </main>
 </body>
 <script>
