@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Слушайте бесплатно композицию &quot;слово&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Песня доступна на всех площадках.">
   <meta property="og:title" content="потерпевшие - слово">
   <meta property="og:description" content="слушать без смс и регистрации">
-  <meta property="og:image" content="https://terpevshie.ru/releases/word/word.jpg">
+  <meta property="og:image" content="https://terpevshie.ru/releases/word/cover.webp">
   <meta property="og:url" content="https://terpevshie.ru/releases/word">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,10 +46,11 @@
     color: white;
     min-height: 100vh;
 
+    background-image: url("./bg.webp");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    transition: background-image 1s ease-in-out;
+    transition: background-image 0.5s ease-in-out
   }
 
   body::before {
@@ -136,11 +138,13 @@
   }
 
   #cover-img {
+    display: block;
     cursor: pointer;
-    height: 100%;
+    aspect-ratio: 1 / 1;
     width: 100%;
     max-width: 500px;
     max-height: 500px;
+    background-color: #151a24;
     box-shadow: 0 0 50px rgba(21, 26, 36, 0.6);
     border-radius: 1rem;
   }
@@ -172,6 +176,7 @@
   #platforms-container {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-evenly;
     align-items: center;
     gap: 1.5rem;
@@ -190,13 +195,20 @@
 <div id="texts-container"></div>
 <nav>
   <a id="home-button" title="на главную" href="/">
-    <img id="logo-img" class="hover-scale" alt="лого потерпевших" src="./logo.png">
+    <img id="logo-img" class="hover-scale" alt="лого потерпевших" src="./logo.webp">
   </a>
 </nav>
 <main class="font-regular">
   <div id="release-card">
     <h1>потерпевшие - слово</h1>
-    <img id="cover-img" class="hover-scale" src="./word.jpg" alt="обложка">
+    <img
+      fetchpriority="high"
+      id="cover-img"
+      class="hover-scale"
+      src="./cover.webp"
+      alt="обложка песни"
+      onerror="this.alt='не удалось загрузить изображение...';"
+    >
     <audio id="bg-audio" src="word.mp3"></audio>
     <div id="progress-bar-wrapper" class="hidden">
       <div id="progress-bar"></div>
@@ -427,21 +439,5 @@
   }
 
   runCycle();
-
-  /* BACKGROUND */
-
-  const images = [
-    './slides/cover.jpg',
-    // Можно добавить еще
-  ];
-
-  function setRandomBackground() {
-    const randomImage = images[Math.floor(Math.random() * images.length)];
-    document.body.style.backgroundImage = `url(${randomImage})`;
-  }
-
-  setRandomBackground();
-
-  setInterval(setRandomBackground, getRandom(4000, 10000));
 </script>
 </html>
