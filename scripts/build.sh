@@ -59,7 +59,7 @@ export HASH_FILE TEMP_HASH_FILE GENERATED_FILE_LIST
 
 cat "$JINJA_LIST_FILE" | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
 
-mv "$TEMP_HASH_FILE" "$HASH_FILE"
+sort "$TEMP_HASH_FILE" > "$HASH_FILE"
 
 echo "🧹 Checking for outdated .html files..."
 find pages -type f -name "*.html" | while read -r file; do
