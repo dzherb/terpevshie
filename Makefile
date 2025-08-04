@@ -4,4 +4,4 @@ build:
 
 .PHONY: run
 run:
-	@uv run scripts/dev_server.py
+	@cd dev_server && go run server.go --templateDir ../pages
