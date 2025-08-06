@@ -3,9 +3,14 @@ set -euo pipefail
 
 THREADS="${1:-4}"
 
-HASH_FILE=".jinja2_hashes"
-TEMP_HASH_FILE=".jinja2_hashes.tmp"
-JINJA_LIST_FILE=".jinja2_files.tmp"
+WORK_DIR="pages"
+EXCLUDE_DIR="common"
+
+cd $WORK_DIR
+
+HASH_FILE=".build_hashes"
+TEMP_HASH_FILE=".build_hashes.tmp"
+JINJA_LIST_FILE=".build_files.tmp"
 GENERATED_FILE_LIST=".generated_html.tmp"
 TEMP_FILES=("$TEMP_HASH_FILE" "$JINJA_LIST_FILE" "$GENERATED_FILE_LIST")
 
@@ -21,7 +26,7 @@ trap cleanup EXIT INT TERM
 > "$GENERATED_FILE_LIST"
 
 echo "🔍 Searching for .jinja2 files..."
-find pages -path pages/common -prune -o -type f -name "*.jinja2" ! -name "*.html" -print > "$JINJA_LIST_FILE"
+find . -path "./$EXCLUDE_DIR" -prune -o -type f -name "*.jinja2" ! -name "*.html" -print > "$JINJA_LIST_FILE"
 
 process_file() {
   local file="$1"
@@ -62,7 +67,7 @@ cat "$JINJA_LIST_FILE" | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
 sort "$TEMP_HASH_FILE" > "$HASH_FILE"
 
 echo "🧹 Checking for outdated .html files..."
-find pages -type f -name "*.html" | while read -r file; do
+find . -type f -name "*.html" | while read -r file; do
   if ! grep -Fxq "$file" "$GENERATED_FILE_LIST"; then
     echo "❌  Deleting outdated: $file"
     rm -f "$file"
