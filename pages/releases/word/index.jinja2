@@ -15,185 +15,185 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
         rel="stylesheet">
+  <style>
+    {% include '../../common/includes/view_transition.css' %}
+
+    .font-regular {
+      font-family: "Old Standard TT", serif;
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    .font-bold {
+      font-family: "Old Standard TT", serif;
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    .font-italic {
+      font-family: "Old Standard TT", serif;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      position: relative;
+      background-color: #151a24;
+      color: white;
+      min-height: 100vh;
+
+      background-image: url("./bg.webp");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: background-image 0.5s ease-in-out
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      background: rgba(21, 26, 36, 0.6);
+      pointer-events: none;
+    }
+
+    nav a {
+      position: fixed;
+      z-index: 3;
+      top: 0.5rem;
+      left: 0.5rem;
+    }
+
+    img {
+      user-select: none;
+    }
+
+    #logo-img {
+      max-width: 80px;
+      max-height: 80px;
+      opacity: 0.8;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    #logo-img:hover {
+      opacity: 1;
+    }
+
+    main {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #texts-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .text-fragment {
+      position: absolute;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #release-card {
+      position: relative;
+      margin: 4.6rem 2rem;
+      z-index: 10;
+      max-width: 600px;
+      max-height: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    #release-card h1 {
+      margin: 0 1rem;
+      font-size: 2.5rem;
+    }
+
+    .hover-scale {
+      transition: transform 0.3s ease;
+      transform-origin: center center;
+    }
+
+    .hover-scale:hover {
+      transform: scale(1.03);
+    }
+
+    #cover-img {
+      display: block;
+      cursor: pointer;
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      max-width: 500px;
+      max-height: 500px;
+      background-color: #151a24;
+      box-shadow: 0 0 50px rgba(21, 26, 36, 0.6);
+      border-radius: 1rem;
+    }
+
+    #progress-bar-wrapper {
+      width: 100%;
+      border-radius: 1rem;
+      min-height: 6px;
+      background: #2b2e38;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      opacity: 1;
+      transition: opacity, color 0.3s ease;
+    }
+
+    #progress-bar-wrapper.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #progress-bar {
+      border-radius: 1rem;
+      min-height: 6px;
+      width: 0;
+      background: #1d55c3;
+      transition: width 0.2s;
+    }
+
+    #platforms-container {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    #platforms-container a {
+      color: white;
+      text-decoration: none;
+    }
+
+    #platforms-container a:visited {
+      color: white;
+    }
+  </style>
 </head>
-<style>
-  {% include '../../common/includes/view_transition.css' %}
-
-  .font-regular {
-    font-family: "Old Standard TT", serif;
-    font-weight: 400;
-    font-style: normal;
-  }
-
-  .font-bold {
-    font-family: "Old Standard TT", serif;
-    font-weight: 700;
-    font-style: normal;
-  }
-
-  .font-italic {
-    font-family: "Old Standard TT", serif;
-    font-weight: 400;
-    font-style: italic;
-  }
-
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  body {
-    position: relative;
-    background-color: #151a24;
-    color: white;
-    min-height: 100vh;
-
-    background-image: url("./bg.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    transition: background-image 0.5s ease-in-out
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 2;
-    background: rgba(21, 26, 36, 0.6);
-    pointer-events: none;
-  }
-
-  nav a {
-    position: fixed;
-    z-index: 3;
-    top: 0.5rem;
-    left: 0.5rem;
-  }
-
-  img {
-    user-select: none;
-  }
-
-  #logo-img {
-    max-width: 80px;
-    max-height: 80px;
-    opacity: 0.8;
-    transition: opacity 0.3s ease-in-out;
-  }
-
-  #logo-img:hover {
-    opacity: 1;
-  }
-
-  main {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #texts-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .text-fragment {
-    position: absolute;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  #release-card {
-    position: relative;
-    margin: 4.6rem 2rem;
-    z-index: 10;
-    max-width: 600px;
-    max-height: 600px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  #release-card h1 {
-    margin: 0 1rem;
-    font-size: 2.5rem;
-  }
-
-  .hover-scale {
-    transition: transform 0.3s ease;
-    transform-origin: center center;
-  }
-
-  .hover-scale:hover {
-    transform: scale(1.03);
-  }
-
-  #cover-img {
-    display: block;
-    cursor: pointer;
-    aspect-ratio: 1 / 1;
-    width: 100%;
-    max-width: 500px;
-    max-height: 500px;
-    background-color: #151a24;
-    box-shadow: 0 0 50px rgba(21, 26, 36, 0.6);
-    border-radius: 1rem;
-  }
-
-  #progress-bar-wrapper {
-    width: 100%;
-    border-radius: 1rem;
-    min-height: 6px;
-    background: #2b2e38;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-    opacity: 1;
-    transition: opacity, color 0.3s ease;
-  }
-
-  #progress-bar-wrapper.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-  }
-
-  #progress-bar {
-    border-radius: 1rem;
-    min-height: 6px;
-    width: 0;
-    background: #1d55c3;
-    transition: width 0.2s;
-  }
-
-  #platforms-container {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-evenly;
-    align-items: center;
-    gap: 1.5rem;
-  }
-
-  #platforms-container a {
-    color: white;
-    text-decoration: none;
-  }
-
-  #platforms-container a:visited {
-    color: white;
-  }
-</style>
 <body>
 <div id="texts-container"></div>
 <nav>
@@ -221,12 +221,11 @@
       <a class="hover-scale" target="_blank" href="https://vk.com/wall-220989745_35">vk</a>
       <a class="hover-scale" target="_blank" href="https://open.spotify.com/track/110HRXaO5jHWax28gzmPlK">spotify</a>
       <a class="hover-scale" target="_blank"
-         href="https://music.apple.com/ru/album/%D1%81%D0%BB%D0%BE%D0%B2%D0%BE/1830292233">apple</a>
+         href="https://music.apple.com/ru/album/%D1%81%D0%BB%D0%BE%D0%B2%D0%BE-single/1830292233">apple</a>
       <a class="hover-scale" target="_blank" href="https://youtu.be/RkK67uu87pM">youtube</a>
     </div>
   </div>
 </main>
-</body>
 <script>
   const audio = document.getElementById('bg-audio');
   const cover = document.getElementById('cover-img');
@@ -443,4 +442,5 @@
 
   runCycle();
 </script>
+</body>
 </html>
