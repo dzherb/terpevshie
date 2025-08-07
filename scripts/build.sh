@@ -121,12 +121,4 @@ cat "$JINJA_LIST_FILE" | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
 
 sort "$TEMP_HASH_FILE" > "$HASH_FILE"
 
-echo "🧹 Checking for outdated .html files..."
-find . -type f -name "*.html" | while read -r file; do
-  if ! grep -Fxq "$file" "$GENERATED_FILE_LIST"; then
-    echo "❌  Deleting outdated: $file"
-    rm -f "$file"
-  fi
-done
-
 echo "🏁 All done!"
