@@ -1,21 +1,44 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}{% endblock %}</title>
+{% extends './base.jinja2' %}
+
+{% block head %}
   <meta property="og:title" content="потерпевшие">
   <meta property="og:description" content="музыка из другого мира">
   <meta property="og:image" content="https://terpevshie.ru/home/logo.png">
   <meta property="og:url" content="https://terpevshie.ru">
   <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
-        rel="stylesheet">
+  {% include '../includes/font_old_standard.html' %}
   {% include '../includes/favicon_tags.html' %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+{% endblock %}
+
+{% block content %}
+  <main class="main-container old-standard-tt-regular">
+    {% block main %}{% endblock %}
+  </main>
+{% endblock %}
+
+{% block script %}
+  <script>
+    VANTA.FOG({
+      el: "body",
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200.00,
+      minWidth: 200.00,
+      highlightColor: 0x0,
+      midtoneColor: 0xb1b1b1,
+      lowlightColor: 0x9d9d9d,
+      baseColor: 0x414141,
+      blurFactor: 0.48,
+      speed: 0.00,
+      zoom: 1.80
+    })
+  </script>
+{% endblock %}
+
+{% block style %}
   <style>
     {% include '../includes/view_transition.css' %}
 
@@ -58,27 +81,4 @@
 
     {% block extra_styles %}{% endblock %}
   </style>
-</head>
-<body>
-<main class="main-container old-standard-tt-regular">
-  {% block main %}{% endblock %}
-</main>
-<script>
-  VANTA.FOG({
-    el: "body",
-    mouseControls: true,
-    touchControls: true,
-    gyroControls: false,
-    minHeight: 200.00,
-    minWidth: 200.00,
-    highlightColor: 0x0,
-    midtoneColor: 0xb1b1b1,
-    lowlightColor: 0x9d9d9d,
-    baseColor: 0x414141,
-    blurFactor: 0.48,
-    speed: 0.00,
-    zoom: 1.80
-  })
-</script>
-</body>
-</html>
+{% endblock %}

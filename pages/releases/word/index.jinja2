@@ -1,9 +1,10 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>потерпевшие - слово</title>
+{% extends '../../common/jinja/layouts/base.jinja2' %}
+
+{% block title %}
+  потерпевшие - слово
+{% endblock %}
+
+{% block head %}
   <meta name="description"
         content="Слушайте бесплатно композицию &quot;слово&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Песня доступна на всех площадках.">
   <meta property="og:title" content="потерпевшие - слово">
@@ -11,13 +12,265 @@
   <meta property="og:image" content="https://terpevshie.ru/releases/word/cover.webp">
   <meta property="og:url" content="https://terpevshie.ru/releases/word">
   <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap"
-        rel="stylesheet">
-  {% include '../../common/includes/favicon_tags.html' %}
+  {% include '../../common/jinja/includes/font_old_standard.html' %}
+  {% include '../../common/jinja/includes/favicon_tags.html' %}
+{% endblock %}
+
+{# Components #}
+{% import '../../common/jinja/components/navbar.jinja2' as navbar %}
+
+{% block content %}
+  {{ navbar.html() }}
+  <div id="texts-container"></div>
+  <main class="font-regular">
+    <div id="release-card">
+      <h1>потерпевшие - слово</h1>
+      <img
+        fetchpriority="high"
+        id="cover-img"
+        class="hover-scale"
+        src="./cover.webp"
+        alt="обложка песни"
+        onerror="this.alt='не удалось загрузить изображение...';"
+      >
+      <audio id="bg-audio" src="word.mp3"></audio>
+      <div id="progress-bar-wrapper" class="hidden">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="platforms-container">
+        <a class="hover-scale" target="_blank" href="https://music.yandex.com/album/37642175">яндекс</a>
+        <a class="hover-scale" target="_blank" href="https://vk.com/wall-220989745_35">vk</a>
+        <a class="hover-scale" target="_blank" href="https://open.spotify.com/track/110HRXaO5jHWax28gzmPlK">spotify</a>
+        <a class="hover-scale" target="_blank"
+           href="https://music.apple.com/ru/album/%D1%81%D0%BB%D0%BE%D0%B2%D0%BE-single/1830292233">apple</a>
+        <a class="hover-scale" target="_blank" href="https://youtu.be/RkK67uu87pM">youtube</a>
+      </div>
+    </div>
+  </main>
+{% endblock %}
+
+{% block script %}
+  <script>
+    const audio = document.getElementById('bg-audio');
+    const cover = document.getElementById('cover-img');
+
+    cover.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    function fadeOutAudio(audio, duration = 1000) {
+      const stepTime = 50;
+      const steps = duration / stepTime;
+      const initialVolume = audio.volume;
+      let currentStep = 0;
+
+      const fade = setInterval(() => {
+        currentStep++;
+        const newVolume = initialVolume * (1 - currentStep / steps);
+        audio.volume = Math.max(0, newVolume);
+
+        if (currentStep >= steps) {
+          clearInterval(fade);
+          audio.pause();
+          audio.volume = initialVolume; // сброс
+        }
+      }, stepTime);
+    }
+
+    cover.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play().catch(err => {
+          console.log('Autoplay failed:', err);
+        });
+      } else {
+        fadeOutAudio(audio, 500);  // 1 секунда затухания
+      }
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+    });
+
+    const progressWrapper = document.getElementById('progress-bar-wrapper');
+
+    audio.addEventListener('play', () => {
+      progressWrapper.classList.remove('hidden');
+    });
+
+    audio.addEventListener('pause', () => {
+      progressWrapper.classList.add('hidden');
+    });
+
+    audio.addEventListener('ended', () => {
+      progressWrapper.classList.add('hidden');
+    });
+
+    /* VISUAL EFFECTS */
+
+    const strings = [
+      ['слово, режь, слово, бей', 'word, cut, word, beat', 'слова, рэж, слова, бі', 'vārds, griezums, vārds, pārspēt', 'คำ,ตัด,คำ,จังหวะ'],
+      ['слово, слово, режь глубже, глубже', 'word, word, cut deeper', 'Wort, Wort, schneide tiefer', '單字，單字，切得更深'],
+      ['режь, режиссер, покажи километры лжи', 'cut, director, show kilometers of lies', 'klipp, regissør, vis kilometervis med løgner', 'potong, sutradara, tunjukkan kilometer kebohongan', 'カット、監督、何キロメートルもの嘘を見せろ'],
+      ['круг, крик и снова', 'cerchju, gridà è torna', 'चक्कर लगावा, चिल्लावा अऊर फिर से', 'rondo, krio kaj denove', 'un cerc, un țipăt și din nou'],
+      ['всё потеряли и устали мы', 'hər şeyi itirdik və yorulduq', 'mēs visi esam zaudējuši un noguruši', 'మేము ప్రతిదీ కోల్పోయాము మరియు మేము అలసిపోయాము'],
+      ['словно меж двух огней я зажат меж дверей', 'wéi wann ech tëscht zwee Luuchten tëscht Dieren agespaart wier', 'әйтерһең дә ике ут араһында мин ишек араһында ҡыҫылам', 'comme entre deux lumières, je suis coincé entre les portes'],
+    ]
+
+    function getRandom(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    const textClasses = ['font-italic', 'font-bold'];
+
+    function createTextElement(text, top, left, fontSize, opacity) {
+      const el = document.createElement('div');
+      el.className = 'text-fragment';
+      el.style.top = `${top}px`;
+      el.style.left = `${left}px`;
+      el.style.fontSize = `${fontSize}px`;
+      el.style.opacity = opacity;
+      el.textContent = '';
+      el.style.transition = `opacity ${getRandom(500, 2000)}ms ease-out`;
+
+      if (Math.random() < 0.3) {
+        const randomClass = textClasses[Math.floor(Math.random() * textClasses.length)];
+        el.classList.add(randomClass);
+      }
+
+      document.getElementById('texts-container').appendChild(el);
+      return el;
+    }
+
+    function typeText(el, text, delay) {
+      return new Promise(resolve => {
+        let i = 0;
+        const interval = setInterval(() => {
+          el.textContent += text[i++];
+          if (i >= text.length) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, delay);
+      });
+    }
+
+    function measureTextWidth(text, fontSize, fontClass = "font-regular") {
+      const temp = document.createElement('div');
+      temp.className = `text-fragment ${fontClass}`;
+      temp.style.fontSize = `${fontSize}px`;
+      temp.style.position = 'absolute';
+      temp.style.whiteSpace = 'nowrap';
+      temp.style.opacity = '0';
+      temp.textContent = text;
+      document.body.appendChild(temp);
+      const width = temp.getBoundingClientRect().width;
+      temp.remove();
+      return width;
+    }
+
+    const usedAreas = [];
+
+    function doesOverlap(a, b) {
+      return !(
+        a.left + a.width < b.left ||
+        b.left + b.width < a.left ||
+        a.top + a.height < b.top ||
+        b.top + b.height < a.top
+      );
+    }
+
+    function getSafePosition(text, fontSize) {
+      const textWidth = measureTextWidth(text, fontSize);
+      const textHeight = fontSize * 1.3;
+
+      const maxLeft = Math.max(0, window.innerWidth - textWidth);
+      const maxTop = Math.max(0, window.innerHeight - textHeight);
+
+      const avoidBox = {
+        left: window.innerWidth / 2 - 250,
+        top: window.innerHeight / 2 - 250,
+        width: 500,
+        height: 500
+      };
+
+      let attempts = 0;
+      while (attempts < 50) {
+        const left = getRandom(0, maxLeft);
+        const top = getRandom(0, maxTop);
+
+        const box = {left, top, width: textWidth, height: textHeight};
+
+        const overlapsUsed = usedAreas.some(area => doesOverlap(area, box));
+        const overlapsCenter = doesOverlap(avoidBox, box);
+
+        const allowCenter = Math.random() < 0.1; // 10% шанс попасть в центр
+
+        if (!overlapsUsed && (!overlapsCenter || allowCenter)) {
+          usedAreas.push(box);
+          return {top, left};
+        }
+
+        attempts++;
+      }
+
+      // Если не нашли подходящее место — всё равно возвращаем (возможно, будет наезд)
+      const fallbackLeft = getRandom(0, maxLeft);
+      const fallbackTop = getRandom(0, maxTop);
+      return {top: fallbackTop, left: fallbackLeft};
+    }
+
+    async function runCycle() {
+      const width = window.innerWidth;
+
+      let count
+      if (width < 500) {
+        count = Math.floor(getRandom(2, 5));
+      } else if (width < 900) {
+        count = Math.floor(getRandom(5, 15));
+      } else {
+        count = Math.floor(getRandom(5, 30));
+      }
+
+      const typingDelay = getRandom(60, 120);
+
+      const promises = [];
+      usedAreas.length = 0; // очищаем перед новым циклом
+
+      const seriesIndex = Math.floor(getRandom(0, strings.length));
+      for (let i = 0; i < count; i++) {
+        const text = strings[seriesIndex][Math.floor(Math.random() * strings[seriesIndex].length)];
+
+        const fontSize = getRandom(30, 60);
+        const opacity = getRandom(0.1, 0.6);
+        const fadeDuration = getRandom(500, 2000);
+
+        const {top, left} = getSafePosition(text, fontSize);
+
+        const el = createTextElement(text, top, left, fontSize, opacity);
+        el.style.transition = `opacity ${fadeDuration}ms ease-out`;
+
+        promises.push(
+          setTimeout(() => {
+            typeText(el, text, typingDelay).then(() => {
+              setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 2000);
+              }, 2000);
+            })
+          }, getRandom(0, 2000))
+        );
+      }
+
+      await Promise.all(promises);
+      setTimeout(runCycle, getRandom(1000, 8000));
+    }
+
+    runCycle();
+  </script>
+{% endblock %}
+
+{% block style %}
   <style>
-    {% include '../../common/includes/view_transition.css' %}
+    {% include '../../common/jinja/includes/view_transition.css' %}
 
     .font-regular {
       font-family: "Old Standard TT", serif;
@@ -68,26 +321,10 @@
       pointer-events: none;
     }
 
-    nav a {
-      position: fixed;
-      z-index: 3;
-      top: 0.5rem;
-      left: 0.5rem;
-    }
+    {{ navbar.styles() }}
 
     img {
       user-select: none;
-    }
-
-    #logo-img {
-      max-width: 80px;
-      max-height: 80px;
-      opacity: 0.8;
-      transition: opacity 0.3s ease-in-out;
-    }
-
-    #logo-img:hover {
-      opacity: 1;
     }
 
     main {
@@ -194,254 +431,4 @@
       color: white;
     }
   </style>
-</head>
-<body>
-<div id="texts-container"></div>
-<nav>
-  <a id="home-button" title="на главную" href="/">
-    <img id="logo-img" class="hover-scale" alt="лого потерпевших" src="./logo.webp">
-  </a>
-</nav>
-<main class="font-regular">
-  <div id="release-card">
-    <h1>потерпевшие - слово</h1>
-    <img
-      fetchpriority="high"
-      id="cover-img"
-      class="hover-scale"
-      src="./cover.webp"
-      alt="обложка песни"
-      onerror="this.alt='не удалось загрузить изображение...';"
-    >
-    <audio id="bg-audio" src="word.mp3"></audio>
-    <div id="progress-bar-wrapper" class="hidden">
-      <div id="progress-bar"></div>
-    </div>
-    <div id="platforms-container">
-      <a class="hover-scale" target="_blank" href="https://music.yandex.com/album/37642175">яндекс</a>
-      <a class="hover-scale" target="_blank" href="https://vk.com/wall-220989745_35">vk</a>
-      <a class="hover-scale" target="_blank" href="https://open.spotify.com/track/110HRXaO5jHWax28gzmPlK">spotify</a>
-      <a class="hover-scale" target="_blank"
-         href="https://music.apple.com/ru/album/%D1%81%D0%BB%D0%BE%D0%B2%D0%BE-single/1830292233">apple</a>
-      <a class="hover-scale" target="_blank" href="https://youtu.be/RkK67uu87pM">youtube</a>
-    </div>
-  </div>
-</main>
-<script>
-  const audio = document.getElementById('bg-audio');
-  const cover = document.getElementById('cover-img');
-
-  cover.addEventListener('contextmenu', (e) => e.preventDefault());
-
-  function fadeOutAudio(audio, duration = 1000) {
-    const stepTime = 50;
-    const steps = duration / stepTime;
-    const initialVolume = audio.volume;
-    let currentStep = 0;
-
-    const fade = setInterval(() => {
-      currentStep++;
-      const newVolume = initialVolume * (1 - currentStep / steps);
-      audio.volume = Math.max(0, newVolume);
-
-      if (currentStep >= steps) {
-        clearInterval(fade);
-        audio.pause();
-        audio.volume = initialVolume; // сброс
-      }
-    }, stepTime);
-  }
-
-  cover.addEventListener('click', () => {
-    if (audio.paused) {
-      audio.play().catch(err => {
-        console.log('Autoplay failed:', err);
-      });
-    } else {
-      fadeOutAudio(audio, 500);  // 1 секунда затухания
-    }
-  });
-
-  audio.addEventListener('timeupdate', () => {
-    const percent = (audio.currentTime / audio.duration) * 100;
-    document.getElementById('progress-bar').style.width = `${percent}%`;
-  });
-
-  const progressWrapper = document.getElementById('progress-bar-wrapper');
-
-  audio.addEventListener('play', () => {
-    progressWrapper.classList.remove('hidden');
-  });
-
-  audio.addEventListener('pause', () => {
-    progressWrapper.classList.add('hidden');
-  });
-
-  audio.addEventListener('ended', () => {
-    progressWrapper.classList.add('hidden');
-  });
-
-  /* VISUAL EFFECTS */
-
-  const strings = [
-    ['слово, режь, слово, бей', 'word, cut, word, beat', 'слова, рэж, слова, бі', 'vārds, griezums, vārds, pārspēt', 'คำ,ตัด,คำ,จังหวะ'],
-    ['слово, слово, режь глубже, глубже', 'word, word, cut deeper', 'Wort, Wort, schneide tiefer', '單字，單字，切得更深'],
-    ['режь, режиссер, покажи километры лжи', 'cut, director, show kilometers of lies', 'klipp, regissør, vis kilometervis med løgner', 'potong, sutradara, tunjukkan kilometer kebohongan', 'カット、監督、何キロメートルもの嘘を見せろ'],
-    ['круг, крик и снова', 'cerchju, gridà è torna', 'चक्कर लगावा, चिल्लावा अऊर फिर से', 'rondo, krio kaj denove', 'un cerc, un țipăt și din nou'],
-    ['всё потеряли и устали мы', 'hər şeyi itirdik və yorulduq', 'mēs visi esam zaudējuši un noguruši', 'మేము ప్రతిదీ కోల్పోయాము మరియు మేము అలసిపోయాము'],
-    ['словно меж двух огней я зажат меж дверей', 'wéi wann ech tëscht zwee Luuchten tëscht Dieren agespaart wier', 'әйтерһең дә ике ут араһында мин ишек араһында ҡыҫылам', 'comme entre deux lumières, je suis coincé entre les portes'],
-  ]
-
-  function getRandom(min, max) {
-    return Math.random() * (max - min) + min;
-  }
-
-  const textClasses = ['font-italic', 'font-bold'];
-
-  function createTextElement(text, top, left, fontSize, opacity) {
-    const el = document.createElement('div');
-    el.className = 'text-fragment';
-    el.style.top = `${top}px`;
-    el.style.left = `${left}px`;
-    el.style.fontSize = `${fontSize}px`;
-    el.style.opacity = opacity;
-    el.textContent = '';
-    el.style.transition = `opacity ${getRandom(500, 2000)}ms ease-out`;
-
-    if (Math.random() < 0.3) {
-      const randomClass = textClasses[Math.floor(Math.random() * textClasses.length)];
-      el.classList.add(randomClass);
-    }
-
-    document.getElementById('texts-container').appendChild(el);
-    return el;
-  }
-
-  function typeText(el, text, delay) {
-    return new Promise(resolve => {
-      let i = 0;
-      const interval = setInterval(() => {
-        el.textContent += text[i++];
-        if (i >= text.length) {
-          clearInterval(interval);
-          resolve();
-        }
-      }, delay);
-    });
-  }
-
-  function measureTextWidth(text, fontSize, fontClass = "font-regular") {
-    const temp = document.createElement('div');
-    temp.className = `text-fragment ${fontClass}`;
-    temp.style.fontSize = `${fontSize}px`;
-    temp.style.position = 'absolute';
-    temp.style.whiteSpace = 'nowrap';
-    temp.style.opacity = '0';
-    temp.textContent = text;
-    document.body.appendChild(temp);
-    const width = temp.getBoundingClientRect().width;
-    temp.remove();
-    return width;
-  }
-
-  const usedAreas = [];
-
-  function doesOverlap(a, b) {
-    return !(
-      a.left + a.width < b.left ||
-      b.left + b.width < a.left ||
-      a.top + a.height < b.top ||
-      b.top + b.height < a.top
-    );
-  }
-
-  function getSafePosition(text, fontSize) {
-    const textWidth = measureTextWidth(text, fontSize);
-    const textHeight = fontSize * 1.3;
-
-    const maxLeft = Math.max(0, window.innerWidth - textWidth);
-    const maxTop = Math.max(0, window.innerHeight - textHeight);
-
-    const avoidBox = {
-      left: window.innerWidth / 2 - 250,
-      top: window.innerHeight / 2 - 250,
-      width: 500,
-      height: 500
-    };
-
-    let attempts = 0;
-    while (attempts < 50) {
-      const left = getRandom(0, maxLeft);
-      const top = getRandom(0, maxTop);
-
-      const box = {left, top, width: textWidth, height: textHeight};
-
-      const overlapsUsed = usedAreas.some(area => doesOverlap(area, box));
-      const overlapsCenter = doesOverlap(avoidBox, box);
-
-      const allowCenter = Math.random() < 0.1; // 10% шанс попасть в центр
-
-      if (!overlapsUsed && (!overlapsCenter || allowCenter)) {
-        usedAreas.push(box);
-        return {top, left};
-      }
-
-      attempts++;
-    }
-
-    // Если не нашли подходящее место — всё равно возвращаем (возможно, будет наезд)
-    const fallbackLeft = getRandom(0, maxLeft);
-    const fallbackTop = getRandom(0, maxTop);
-    return {top: fallbackTop, left: fallbackLeft};
-  }
-
-  async function runCycle() {
-    const width = window.innerWidth;
-
-    let count
-    if (width < 500) {
-      count = Math.floor(getRandom(2, 5));
-    } else if (width < 900) {
-      count = Math.floor(getRandom(5, 15));
-    } else {
-      count = Math.floor(getRandom(5, 30));
-    }
-
-    const typingDelay = getRandom(60, 120);
-
-    const promises = [];
-    usedAreas.length = 0; // очищаем перед новым циклом
-
-    const seriesIndex = Math.floor(getRandom(0, strings.length));
-    for (let i = 0; i < count; i++) {
-      const text = strings[seriesIndex][Math.floor(Math.random() * strings[seriesIndex].length)];
-
-      const fontSize = getRandom(30, 60);
-      const opacity = getRandom(0.1, 0.6);
-      const fadeDuration = getRandom(500, 2000);
-
-      const {top, left} = getSafePosition(text, fontSize);
-
-      const el = createTextElement(text, top, left, fontSize, opacity);
-      el.style.transition = `opacity ${fadeDuration}ms ease-out`;
-
-      promises.push(
-        setTimeout(() => {
-          typeText(el, text, typingDelay).then(() => {
-            setTimeout(() => {
-              el.style.opacity = '0';
-              setTimeout(() => el.remove(), 2000);
-            }, 2000);
-          })
-        }, getRandom(0, 2000))
-      );
-    }
-
-    await Promise.all(promises);
-    setTimeout(runCycle, getRandom(1000, 8000));
-  }
-
-  runCycle();
-</script>
-</body>
-</html>
+{% endblock %}

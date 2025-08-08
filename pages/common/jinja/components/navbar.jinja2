@@ -1,0 +1,31 @@
+{% macro html() %}
+  <nav>
+    <a id="home-button" title="на главную" href="/">
+      <img id="logo-img" alt="лого потерпевших" src="/common/images/logo_no_bg.webp">
+    </a>
+  </nav>
+{% endmacro %}
+
+<style>
+  {% macro styles() %}
+    nav a {
+      position: fixed;
+      z-index: 3;
+      top: 0.5rem;
+      left: 0.5rem;
+    }
+
+    #logo-img {
+      max-width: 80px;
+      max-height: 80px;
+      opacity: 0.8;
+      transition: opacity, transform 0.3s ease-in-out;
+      transform-origin: center center;
+    }
+
+    #logo-img:hover {
+      opacity: 1;
+      transform: scale(1.03);
+    }
+  {% endmacro %}
+</style>
