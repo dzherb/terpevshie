@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	renderCmd = "minijinja-cli"
+	renderCmd            = "minijinja-cli"
+	notFoundTemplatePath = "404.jinja2"
 )
 
 var (
@@ -99,13 +100,22 @@ func pagesHandler(w http.ResponseWriter, r *http.Request) {
 		strings.TrimPrefix(r.URL.Path, "/"),
 	)
 
+	render := true
+
 	if strings.HasSuffix(r.URL.Path, "/") {
 		path = filepath.Join(path, "index.jinja2")
 	} else if strings.HasSuffix(path, ".html") {
 		path = strings.TrimSuffix(path, ".html") + ".jinja2"
-	} else if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		path = filepath.Join(templateDir, "404.jinja2")
 	} else {
+		render = false
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		path = filepath.Join(templateDir, notFoundTemplatePath)
+		render = true
+	}
+
+	if render == false {
 		http.FileServer(http.Dir(templateDir)).ServeHTTP(w, r)
 		return
 	}
@@ -116,21 +126,31 @@ func pagesHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Render error:", err)
 		return
 	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(html)
+
+	_, err = w.Write(html)
+	if err != nil {
+		log.Println("Write error:", err)
+	}
 }
 
 func renderTemplate(path string) ([]byte, error) {
 	cmd := exec.Command(renderCmd, path)
+
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
+
 	html := string(out)
 	if strings.Contains(html, "</body>") {
 		html = strings.Replace(html, "</body>",
 			`<script src="/__livereload.js"></script></body>`, 1)
 	}
+
+	log.Println("Rendered", path)
+
 	return []byte(html), nil
 }
 
