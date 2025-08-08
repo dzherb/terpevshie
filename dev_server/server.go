@@ -192,31 +192,70 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func watchFiles(ctx context.Context) {
-	log.Printf("Watching %v directory", templateDir)
+	log.Printf("📂 Watching %v directory (recursive)", templateDir)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal("Watcher init error:", err)
 	}
+
 	defer func() {
 		watcher.Close()
 		log.Println("✅ Watcher stopped")
 	}()
 
-	err = watcher.Add(templateDir)
+	// Recursively add all directories
+	err = filepath.WalkDir(templateDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			// Skip hidden dirs like .git
+			if strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
+			if werr := watcher.Add(path); werr != nil {
+				return werr
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
-		log.Fatal("Watcher add error:", err)
+		log.Fatal("Watcher walk error:", err)
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
+
 		case ev := <-watcher.Events:
+			// If a new directory is created — watch it too
+			if ev.Op&fsnotify.Create == fsnotify.Create {
+				fi, err := os.Stat(ev.Name)
+				if err == nil && fi.IsDir() {
+					isTmpFile := strings.HasSuffix(ev.Name, "~")
+					isDotFile := strings.HasPrefix(filepath.Base(ev.Name), ".")
+					if isTmpFile || isDotFile {
+						continue
+					}
+
+					if werr := watcher.Add(ev.Name); werr != nil {
+						log.Println("Watcher add error:", werr)
+						continue
+					}
+
+					log.Println("📂 New folder watched:", ev.Name)
+				}
+			}
+
+			// File modified
 			if ev.Op&fsnotify.Write == fsnotify.Write {
 				log.Println("🔄 Modified:", ev.Name)
 				broadcast("reload")
 			}
+
 		case err := <-watcher.Errors:
 			log.Println("Watcher error:", err)
 		}
@@ -240,8 +279,6 @@ func main() {
 	flag.IntVar(&port, "port", 8000, "Port to run the dev server on")
 	flag.Parse()
 
-	srv := NewServer(port)
-
 	// Signal handling
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -252,7 +289,7 @@ func main() {
 	// Start HTTP server
 	go func() {
 		defer wg.Done()
-		srv.ListenAndServe(ctx)
+		NewServer(port).ListenAndServe(ctx)
 	}()
 
 	// Start watcher
