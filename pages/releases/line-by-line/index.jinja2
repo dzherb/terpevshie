@@ -277,26 +277,41 @@
 
     /* BACKGROUND */
 
+    let mouseX = 0, mouseY = 0;
+    let targetX = 0, targetY = 0;
+
+    document.addEventListener('mousemove', e => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * -2; // -1..1
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
     const bgEl = document.querySelector('#background-image');
     const noiseEl = document.querySelector('#background-noise');
     const rgbShiftEl = document.querySelector('#background-rgb-shift');
 
     function animateBackground() {
-      const t = Date.now() / 4000;
+      const t = performance.now()
 
-      // Дыхание фона
-      const scale = {{ constants.bg_img_scale }} + Math.sin(t) * 0.015;
-      bgEl.style.transform = `scale(${scale}, -${scale})`;
+      // Медленно интерполируем targetX/Y к mouseX/Y (инерция)
+      targetX += (mouseX - targetX) * 0.02;
+      targetY += (mouseY - targetY) * 0.02;
+
+      const parallaxX = targetX * 30; // px
+      const parallaxY = targetY * 30; // px
+
+
+      const scale = {{ constants.bg_img_scale }} + Math.sin(t / 4000) * 0.015;
+      bgEl.style.transform = `scale(${scale}, -${scale}) translate(${parallaxX}px, ${parallaxY}px)`;
 
       // Движение шума
       noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;
 
       // Лёгкое цветовое смещение
-      const shiftX = Math.sin(Date.now() / 2000) * 50; // пиксели
+      const shiftX = Math.sin(t / 2000) * 50; // пиксели
       rgbShiftEl.style.transform = ` scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(${shiftX}px)`;
 
       // Цветовой перелив через hue-rotate
-      const hue = (Date.now() / 5) % 360;
+      const hue = (t / 5) % 360;
       rgbShiftEl.style.filter = `blur(12px) contrast(1.05) saturate(1.1) hue-rotate(${hue}deg)`;
 
       requestAnimationFrame(animateBackground);
@@ -373,7 +388,7 @@
       filter: blur(12px) contrast(1.05) saturate(1.1);
       mix-blend-mode: screen;
       opacity: 0.2;
-      transform:  scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(0);
+      transform: scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(0);
       z-index: -1;
       pointer-events: none;
     }
