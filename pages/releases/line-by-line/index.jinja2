@@ -1,5 +1,9 @@
 {% extends '../../common/jinja/layouts/base.jinja2' %}
 
+{% block title %}
+  потерпевшие - построчно
+{% endblock %}
+
 {% block head %}
   <meta name="description"
         content="Слушайте бесплатно альбом &quot;построчно&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Альбом доступен на всех площадках.">
@@ -304,20 +308,31 @@
       bgEl.style.transform = `scale(${scale}, -${scale}) translate(${parallaxX}px, ${parallaxY}px)`;
 
       // Движение шума
-      noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;
+      {#noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;#}
 
       // Лёгкое цветовое смещение
       const shiftX = Math.sin(t / 2000) * 50; // пиксели
       rgbShiftEl.style.transform = ` scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(${shiftX}px)`;
 
       // Цветовой перелив через hue-rotate
-      const hue = (t / 5) % 360;
-      rgbShiftEl.style.filter = `blur(12px) contrast(1.05) saturate(1.1) hue-rotate(${hue}deg)`;
+      {#const hue = (t / 5) % 360;#}
+      {#rgbShiftEl.style.filter = `blur(12px) contrast(1.05) saturate(1.1) hue-rotate(${hue}deg)`;#}
 
       requestAnimationFrame(animateBackground);
     }
 
     animateBackground();
+
+    window.addEventListener('load', () => {
+      const img = new Image();
+      img.src = getComputedStyle(bgEl).backgroundImage.replace(/url\((['"])?(.*?)\1\)/, '$2');
+      console.log(img.src)
+      img.onload = () => {
+        setTimeout(() => {
+          bgEl.classList.add('visible');
+        }, 200);
+      };
+    });
   </script>
 {% endblock %}
 
@@ -334,6 +349,22 @@
 
     {{ navbar.styles() }}
 
+    body {
+      margin: 0;
+      background: #7a6559;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.2) 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
     #background-image {
       position: fixed;
       top: 0;
@@ -345,13 +376,18 @@
       background-size: cover;
       background-position: center;
 
-      opacity: 0.5;
+      opacity: 0;
       filter: blur(10px) brightness(0.8);
       transform: scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }});
+      transition: opacity 3s ease;
 
       z-index: -3;
       pointer-events: none;
-      will-change: transform, filter;
+      will-change: opacity, transform, filter;
+    }
+
+    #background-image.visible {
+      opacity: 0.5;
     }
 
     #background-color-overlay {
@@ -372,7 +408,7 @@
       inset: 0;
       background-image: url('noise.png');
       background-size: cover;
-      opacity: 0.05;
+      opacity: 0.03;
       transform: scale(1.4);
       mix-blend-mode: soft-light;
       z-index: -2;
@@ -390,22 +426,6 @@
       opacity: 0.2;
       transform: scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(0);
       z-index: -1;
-      pointer-events: none;
-    }
-
-    body {
-      margin: 0;
-      background: #9c7b69;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.2) 100%);
-      z-index: 0;
       pointer-events: none;
     }
 
