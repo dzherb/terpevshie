@@ -13,7 +13,8 @@
 {% endblock %}
 
 {% set constants = {
-  "cover_img_padding_in_px": "5",
+  "cover_img_padding_in_px": 5,
+  "cover_img_rounding_in_px": 10,
 } %}
 
 {# Components #}
@@ -40,12 +41,11 @@
 {% block script %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script>
+    {% set cover_img_extra_size = constants.cover_img_padding_in_px * 2 %}
+  
     let img;
     let glitchTime = 0;
     let nextGlitch = 0;
-
-    const coverImgRoundingInPx = 10
-    const coverImgPaddingInPx = {{ constants.cover_img_padding_in_px }};
 
     const coverImgEl = document.getElementById('album-img')
     let canvasEl;
@@ -75,7 +75,11 @@
     function preload() {
       let roundedMask;
       img = loadImage("cover.webp", () => {
-        roundedMask = createRoundedMask(img.width, img.height, coverImgRoundingInPx);
+        roundedMask = createRoundedMask(
+          img.width,
+          img.height,
+          {{ constants.cover_img_rounding_in_px }},
+        );
         img.mask(roundedMask);
         coverImgEl.style.opacity = 0;
       });
@@ -87,8 +91,10 @@
 
     function setup() {
       const imgBounds = coverImgEl.getBoundingClientRect();
-      const extraSize = coverImgPaddingInPx * 2;
-      canvasEl = createCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
+      canvasEl = createCanvas(
+        imgBounds.width + {{ cover_img_extra_size }},
+        imgBounds.height + {{ cover_img_extra_size }},
+      );
       canvasEl.parent('#container');
       imageMode(CENTER);
       noSmooth();
@@ -168,13 +174,26 @@
     }
 
     const RGBShiftIntensityFactor = createSmoothValue(40, 100, 24000)
-    const rgbShiftAmount = 3;
-    const redPhase = 0;
-    const greenPhase = 0.33;
-    const bluePhase = 0.66;
-    const shiftRFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, redPhase);
-    const shiftGFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, greenPhase);
-    const shiftBFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, bluePhase);
+
+    {% set rgb_shift_amount = 4 %}
+    const shiftRFactor = createSmoothValue(
+      {{ rgb_shift_amount * 0.5 }},
+      {{ rgb_shift_amount }},
+      4000,
+      0,
+    );
+    const shiftGFactor = createSmoothValue(
+      {{ rgb_shift_amount * 0.5 }},
+      {{ rgb_shift_amount }},
+      4000,
+      0.33
+    );
+    const shiftBFactor = createSmoothValue(
+      {{ rgb_shift_amount * 0.5 }},
+      {{ rgb_shift_amount }},
+      4000,
+      0.66
+    );
 
     // RGB сдвиг — отдельно рисуем 3 слоя с цветовым сдвигом и прозрачностью
     function drawRGBShift(imgWidth, imgHeight) {
@@ -214,7 +233,6 @@
 
       drawCover(imgWidth, imgHeight);
 
-      // Включаем глитч
       if (millis() < glitchTime) {
         Math.random() > 0.2 ? drawGlitch(imgWidth, imgHeight) : drawCutGlitch(imgWidth, imgHeight);
       }
@@ -230,8 +248,10 @@
 
     function windowResized() {
       const imgBounds = coverImgEl.getBoundingClientRect()
-      const extraSize = coverImgPaddingInPx * 2
-      resizeCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
+      resizeCanvas(
+        imgBounds.width + {{ cover_img_extra_size }},
+        imgBounds.height + {{ cover_img_extra_size }},
+      );
     }
   </script>
 {% endblock %}
@@ -264,7 +284,7 @@
       width: 100%;
       max-width: 500px;
       max-height: 500px;
-      border-radius: 10px; /* todo 1rem */
+      border-radius: {{ constants.cover_img_rounding_in_px }}px; /* todo 1rem */
     }
 
     canvas {
