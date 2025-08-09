@@ -12,6 +12,10 @@
   {% include '../../common/jinja/includes/favicon_tags.html' %}
 {% endblock %}
 
+{% set constants = {
+  "cover_img_padding_in_px": "5",
+} %}
+
 {# Components #}
 {% import '../../common/jinja/components/navbar.jinja2' as navbar %}
 
@@ -19,7 +23,7 @@
   {{ navbar.html() }}
   <main style="width: 100%; display: flex; justify-content: center; align-items: center;">
     <div style="padding: 4.2rem 2rem;">
-      <div id="container" style="position: relative; padding: 5px">
+      <div id="container" style="position: relative; padding: {{ constants.cover_img_padding_in_px }}px">
         <img
           fetchpriority="high"
           id="album-img"
@@ -41,10 +45,24 @@
     let nextGlitch = 0;
 
     const coverImgRoundingInPx = 10
-    const coverImgMarginInPx = 5;
+    const coverImgPaddingInPx = {{ constants.cover_img_padding_in_px }};
 
     const coverImgEl = document.getElementById('album-img')
     let canvasEl = null;
+
+    function createSmoothValue(min, max, periodMs, phase = 0) {
+      // min, max — границы
+      // periodMs — полный цикл (в миллисекундах), например 4000 для 4 секунд
+      // phase — сдвиг по времени (0..1), чтобы сделать несколько значений с разной фазой
+
+      return {
+        get() {
+          const t = (performance.now() % periodMs) / periodMs; // от 0 до 1
+          const easedT = 0.5 + 0.5 * Math.sin(2 * Math.PI * (t + phase)); // от 0 до 1 с easing
+          return min + easedT * (max - min);
+        }
+      };
+    }
 
     function createRoundedMask(w, h, r) {
       let mask = createGraphics(w, h);
@@ -64,12 +82,12 @@
     }
 
     function planNextGlitch() {
-      nextGlitch = millis() + random(1000, 10000)
+      nextGlitch = millis() + random(1000, random(4000, 13000))
     }
 
     function setup() {
       const imgBounds = coverImgEl.getBoundingClientRect()
-      const extraSize = coverImgMarginInPx * 2
+      const extraSize = coverImgPaddingInPx * 2
       canvasEl = createCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
       canvasEl.parent('#container');
       imageMode(CENTER);
@@ -77,8 +95,7 @@
       planNextGlitch();
     }
 
-    // todo пусть иногда то увеличивается, то уменьшается
-    const deformFactor = 3
+    let deformFactor = createSmoothValue(2, 5, 11000)
 
     function drawCover(imgWidth, imgHeight) {
       let cx = width / 2;
@@ -86,7 +103,7 @@
 
       let yStep = 2;
       for (let y = 0; y < imgHeight; y += yStep) {
-        let offset = (noise(y * 0.02, millis() * 0.0005) - 0.5) * deformFactor;
+        let offset = (noise(y * 0.02, millis() * 0.0005) - 0.5) * deformFactor.get();
         image(
           img,
           cx + offset,
@@ -101,6 +118,8 @@
       }
     }
 
+    let glitchFactor = createSmoothValue(1, 10, 20000)
+
     function drawGlitch(imgWidth, imgHeight) {
       let cx = width / 2;
       let cy = height / 2;
@@ -108,19 +127,23 @@
       push();
       imageMode(CORNER);
       translate(cx - imgWidth / 2, cy - imgHeight / 2);
-      tint(255, random(50, 255)); // прозрачность глитча
+      tint(255, random(50, 255)); // Прозрачность глитча
 
-      const count = random(5, 30)
+      const count = random(5, 30);
       for (let i = 0; i < count; i++) {
-        let sx = random(img.width + 50);
-        let sy = random(img.height + 20);
-        let sw = random(10, 50);
-        let sh = random(5, 20);
+        // Source rect в пикселях оригинального изображения
+        let swSrc = random(10, 50 * glitchFactor.get());
+        let shSrc = random(5, 20 * glitchFactor.get());
+        let sx = random(img.width - swSrc);
+        let sy = random(img.height - shSrc);
 
-        let dx = sx + random(-5, 5);
-        let dy = sy + random(-5, 5);
+        // Размеры и позиция на canvas (пропорционально imgWidth/imgHeight)
+        let sw = (swSrc / img.width) * imgWidth;
+        let sh = (shSrc / img.height) * imgHeight;
+        let dx = (sx / img.width) * imgWidth + random(-5, 5);
+        let dy = (sy / img.height) * imgHeight + random(-5, 5);
 
-        image(img, dx, dy, sw, sh, sx, sy, sw, sh);
+        image(img, dx, dy, sw, sh, sx, sy, swSrc, shSrc);
       }
 
       pop();
@@ -128,12 +151,10 @@
     }
 
     function draw() {
-      // пусть глитч иногда "зависает"
-      // if (Math.random() < 0.01) {
-      //   clear();
-      // }
-
+      // Пусть глитч иногда "зависает"?
+      // if (Math.random() < 0.05) {
       clear();
+      // }
 
       const imgBounds = coverImgEl.getBoundingClientRect();
       const imgWidth = imgBounds.width;
@@ -154,9 +175,9 @@
 
     function windowResized() {
       const imgBounds = coverImgEl.getBoundingClientRect()
-      const extraSize = coverImgMarginInPx * 2
+      const extraSize = coverImgPaddingInPx * 2
       resizeCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
-     }
+    }
   </script>
 {% endblock %}
 
@@ -188,7 +209,7 @@
       width: 100%;
       max-width: 500px;
       max-height: 500px;
-      border-radius: 10px;  /* todo 1rem */
+      border-radius: 10px; /* todo 1rem */
     }
 
     canvas {
