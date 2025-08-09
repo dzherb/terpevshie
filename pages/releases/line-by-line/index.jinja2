@@ -22,12 +22,12 @@
 
 {% block content %}
   {{ navbar.html() }}
-  <main style="width: 100%; display: flex; justify-content: center; align-items: center;">
-    <div style="padding: 4.2rem 2rem;">
-      <div id="container" style="position: relative; z-index: 10; padding: {{ constants.cover_img_padding_in_px }}px">
+  <main>
+    <div id="release-card">
+      <div id="cover-img-container">
         <img
           fetchpriority="high"
-          id="album-img"
+          id="cover-img"
           class="hover-scale"
           src="cover.webp"
           alt="обложка альбома"
@@ -42,12 +42,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script>
     {% set cover_img_extra_size = constants.cover_img_padding_in_px * 2 %}
-  
+
     let img;
     let glitchTime = 0;
     let nextGlitch = 0;
 
-    const coverImgEl = document.getElementById('album-img')
+    const coverImgEl = document.getElementById('cover-img')
     let canvasEl;
 
     function createSmoothValue(min, max, periodMs, phase = 0) {
@@ -95,7 +95,7 @@
         imgBounds.width + {{ cover_img_extra_size }},
         imgBounds.height + {{ cover_img_extra_size }},
       );
-      canvasEl.parent('#container');
+      canvasEl.parent('#cover-img-container');
       imageMode(CENTER);
       noSmooth();
       planNextGlitch();
@@ -279,7 +279,24 @@
       overflow: hidden;
     }
 
-    #album-img {
+    main {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #release-card {
+      padding: 4.2rem 2rem;
+    }
+
+    #cover-img-container {
+      position: relative;
+      z-index: 10;
+      padding: {{ constants.cover_img_padding_in_px }}px
+    }
+
+    #cover-img {
       aspect-ratio: 1 / 1;
       width: 100%;
       max-width: 500px;
