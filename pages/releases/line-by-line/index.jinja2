@@ -18,7 +18,7 @@
 
 {% set constants = {
   "cover_img_padding_in_px": 5,
-  "cover_img_rounding_in_px": 10,
+  "cover_img_rounding_in_px": 16,
   "bg_img_scale": 1.15,
 } %}
 
@@ -69,7 +69,18 @@
           <div class="track" data-src="{{ track.src }}">
             <span class="title">{{ track.title }}</span>
             <div class="controls">
-              <button class="play-btn">▶</button>
+              <button class="play-btn">
+                <!-- play icon -->
+                <svg class="icon icon-play" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <polygon points="5,3 19,12 5,21" fill="currentColor"></polygon>
+                </svg>
+
+                <!-- pause icon -->
+                <svg class="icon icon-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
+                  <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
+                </svg>
+              </button>
               <div class="progress">
                 <canvas class="progress-noise"></canvas>
                 <div class="progress-bar"></div>
@@ -358,7 +369,6 @@
     window.addEventListener('load', () => {
       const img = new Image();
       img.src = getComputedStyle(bgEl).backgroundImage.replace(/url\((['"])?(.*?)\1\)/, '$2');
-      console.log(img.src)
       img.onload = () => {
         setTimeout(() => {
           bgEl.classList.add('visible');
@@ -367,6 +377,7 @@
     });
 
     /* AUDIO */
+
     const tracks = document.querySelectorAll('.track');
     let currentAudio = null;
     let currentTrackIndex = -1;
@@ -412,20 +423,17 @@
           tracks.forEach(t => {
             t.classList.remove('playing');
             t.classList.add('paused');
-            t.querySelector('.play-btn').textContent = '▶';
           });
         }
 
         if (audio.paused) {
           audio.play();
-          btn.textContent = '❚❚';
           track.classList.remove('paused');
           track.classList.add('playing');
           currentAudio = audio;
           currentTrackIndex = index;
         } else {
           audio.pause();
-          btn.textContent = '▶';
           track.classList.remove('playing');
           track.classList.add('paused');
         }
@@ -446,7 +454,6 @@
       });
 
       audio.addEventListener('ended', () => {
-        btn.textContent = '▶';
         progressBar.style.width = '0%';
         noiseCanvas.style.width = '0px';
         noiseCanvas.width = 0;
@@ -472,7 +479,6 @@
         drawNoise();
       });
     });
-
   </script>
 {% endblock %}
 
@@ -632,17 +638,14 @@
       flex-direction: column;
       background: rgba({{ track_bg_rgb }}, 0.25);
       padding: 1rem;
-      border-radius: 8px;
+      border-radius: {{ constants.cover_img_rounding_in_px }}px;
       backdrop-filter: blur(4px);
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, background 0.5s ease, filter 1s ease;
-    }
-
-    .track.paused {
-      filter: grayscale(0.1) brightness(0.9);
+      box-shadow: 0 0 10px rgba(41, 27, 18, 0.05);
+      transition: transform 0.3s ease, background 0.5s ease;
     }
 
     .track.playing {
+      transform: translateY(-2px);
       background: rgba({{ track_bg_rgb }}, 0.5);
       box-shadow: 0 0 30px rgba(251, 199, 153, 0.2);
     }
@@ -659,12 +662,38 @@
     }
 
     .play-btn {
+      position: relative;
       background: none;
       border: none;
       height: 1.5rem;
+      width: 2rem;
       color: #e4dad2;
       font-size: 1.2rem;
       cursor: pointer;
+    }
+
+    .play-btn .icon {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: block;
+      pointer-events: none;
+    }
+
+    .play-btn .icon-pause, .track.playing .play-btn .icon-play {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .track.playing .play-btn .icon-pause {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .play-btn:hover {
+      filter: none;
     }
 
     .title {
