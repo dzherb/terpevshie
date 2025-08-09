@@ -15,15 +15,23 @@
 {% set constants = {
   "cover_img_padding_in_px": 5,
   "cover_img_rounding_in_px": 10,
+  "bg_img_scale": 1.15,
 } %}
 
 {# Components #}
 {% import '../../common/jinja/components/navbar.jinja2' as navbar %}
 
 {% block content %}
+  <div id="background-image"></div>
+  <div id="background-color-overlay"></div>
+  <div id="background-noise"></div>
+  <div id="background-rgb-shift"></div>
+
   {{ navbar.html() }}
-  <main>
+
+  <main class="font-regular">
     <div id="release-card">
+      <h1>потерпевшие - построчно</h1>
       <div id="cover-img-container">
         <img
           fetchpriority="high"
@@ -46,6 +54,8 @@
     let img;
     let glitchTime = 0;
     let nextGlitch = 0;
+
+    let canvasStarted = false;
 
     const coverImgEl = document.getElementById('cover-img')
     let canvasEl;
@@ -81,7 +91,6 @@
           {{ constants.cover_img_rounding_in_px }},
         );
         img.mask(roundedMask);
-        coverImgEl.style.opacity = 0;
       });
     }
 
@@ -173,9 +182,10 @@
       pop();
     }
 
-    const RGBShiftIntensityFactor = createSmoothValue(40, 100, 24000)
+    const RGBShiftOpacityFactor = createSmoothValue(10, 40, 24000)
+    let rgbShiftOpacity = 0;  // Для fade-in
 
-    {% set rgb_shift_amount = 4 %}
+    {% set rgb_shift_amount = 3 %}
     const shiftRFactor = createSmoothValue(
       {{ rgb_shift_amount * 0.5 }},
       {{ rgb_shift_amount }},
@@ -197,6 +207,8 @@
 
     // RGB сдвиг — отдельно рисуем 3 слоя с цветовым сдвигом и прозрачностью
     function drawRGBShift(imgWidth, imgHeight) {
+      rgbShiftOpacity = Math.min(1, rgbShiftOpacity + 0.01)
+
       let cx = width / 2;
       let cy = height / 2;
 
@@ -204,15 +216,15 @@
       imageMode(CENTER);
       blendMode(SCREEN);
 
-      const intensity = RGBShiftIntensityFactor.get()
+      const opacity = RGBShiftOpacityFactor.get() * rgbShiftOpacity
 
-      tint(255, 0, 0, intensity);
+      tint(255, 0, 0, opacity);
       image(img, cx - shiftRFactor.get(), cy, imgWidth, imgHeight);
 
-      tint(0, 255, 0, intensity);
+      tint(0, 255, 0, opacity);
       image(img, cx, cy + shiftGFactor.get(), imgWidth, imgHeight);
 
-      tint(0, 0, 255, intensity);
+      tint(0, 0, 255, opacity);
       image(img, cx + shiftBFactor.get(), cy, imgWidth, imgHeight);
 
       pop();
@@ -221,7 +233,15 @@
       noTint();
     }
 
+    let rgbShiftStarted = false;
+    setTimeout(() => rgbShiftStarted = true, 1500)
+
     function draw() {
+      if (!canvasStarted) {
+        canvasStarted = true;
+        coverImgEl.style.opacity = 0;
+      }
+
       // Пусть глитч иногда "зависает"?
       // if (Math.random() < 0.05) {
       clear();
@@ -242,8 +262,9 @@
         planNextGlitch();
       }
 
-      // Рисуем RGB сдвиг с небольшой прозрачностью (создает размытие цвета)
-      drawRGBShift(imgWidth, imgHeight);
+      if (rgbShiftStarted) {
+        drawRGBShift(imgWidth, imgHeight);
+      }
     }
 
     function windowResized() {
@@ -253,6 +274,35 @@
         imgBounds.height + {{ cover_img_extra_size }},
       );
     }
+
+    /* BACKGROUND */
+
+    const bgEl = document.querySelector('#background-image');
+    const noiseEl = document.querySelector('#background-noise');
+    const rgbShiftEl = document.querySelector('#background-rgb-shift');
+
+    function animateBackground() {
+      const t = Date.now() / 4000;
+
+      // Дыхание фона
+      const scale = {{ constants.bg_img_scale }} + Math.sin(t) * 0.015;
+      bgEl.style.transform = `scale(${scale}, -${scale})`;
+
+      // Движение шума
+      noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;
+
+      // Лёгкое цветовое смещение
+      const shiftX = Math.sin(Date.now() / 2000) * 50; // пиксели
+      rgbShiftEl.style.transform = ` scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(${shiftX}px)`;
+
+      // Цветовой перелив через hue-rotate
+      const hue = (Date.now() / 5) % 360;
+      rgbShiftEl.style.filter = `blur(12px) contrast(1.05) saturate(1.1) hue-rotate(${hue}deg)`;
+
+      requestAnimationFrame(animateBackground);
+    }
+
+    animateBackground();
   </script>
 {% endblock %}
 
@@ -269,25 +319,102 @@
 
     {{ navbar.styles() }}
 
+    #background-image {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+
+      background-image: url('bg.jpg');
+      background-size: cover;
+      background-position: center;
+
+      opacity: 0.5;
+      filter: blur(10px) brightness(0.8);
+      transform: scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }});
+
+      z-index: -3;
+      pointer-events: none;
+      will-change: transform, filter;
+    }
+
+    #background-color-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(251, 199, 153, 0.2);
+      mix-blend-mode: overlay;
+
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    #background-noise {
+      position: fixed;
+      inset: 0;
+      background-image: url('noise.png');
+      background-size: cover;
+      opacity: 0.05;
+      transform: scale(1.4);
+      mix-blend-mode: soft-light;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    #background-rgb-shift {
+      position: fixed;
+      inset: 0;
+      background-image: url('bg.jpg');
+      background-size: cover;
+      background-position: center;
+      filter: blur(12px) contrast(1.05) saturate(1.1);
+      mix-blend-mode: screen;
+      opacity: 0.2;
+      transform:  scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(0);
+      z-index: -1;
+      pointer-events: none;
+    }
+
     body {
       margin: 0;
-      background: #221a15;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      background: #9c7b69;
+      min-height: 100vh;
       overflow: hidden;
     }
 
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.2) 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
     main {
-      width: 100%;
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
     }
 
     #release-card {
-      padding: 4.2rem 2rem;
+      color: #e4dad2;
+      margin: 4.6rem 2rem;
+      max-width: 600px;
+      max-height: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    #release-card h1 {
+      margin: 0 1rem;
+      font-size: 2.5rem;
     }
 
     #cover-img-container {
