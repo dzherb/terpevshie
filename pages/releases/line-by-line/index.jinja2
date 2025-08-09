@@ -17,16 +17,20 @@
 
 {% block content %}
   {{ navbar.html() }}
-  {#  <div id="album-container">#}
-  {#    <img#}
-  {#      fetchpriority="high"#}
-  {#      id="album-img"#}
-  {#      class="hover-scale"#}
-  {#      src="cover.webp"#}
-  {#      alt="обложка альбома"#}
-  {#      onerror="this.alt='не удалось загрузить изображение...';"#}
-  {#    >#}
-  {#  </div>#}
+  <main style="width: 100%; display: flex; justify-content: center; align-items: center;">
+    <div style="padding: 4.2rem 2rem;">
+      <div id="container" style="position: relative; padding: 5px">
+        <img
+          fetchpriority="high"
+          id="album-img"
+          class="hover-scale"
+          src="cover.webp"
+          alt="обложка альбома"
+          onerror="this.alt='не удалось загрузить изображение...';"
+        >
+      </div>
+    </div>
+  </main>
 {% endblock %}
 
 {% block script %}
@@ -36,7 +40,11 @@
     let glitchTime = 0;
     let nextGlitch = 0;
 
-    const coverRoundingInPx = 10
+    const coverImgRoundingInPx = 10
+    const coverImgMarginInPx = 5;
+
+    const coverImgEl = document.getElementById('album-img')
+    let canvasEl = null;
 
     function createRoundedMask(w, h, r) {
       let mask = createGraphics(w, h);
@@ -49,9 +57,9 @@
     function preload() {
       let roundedMask;
       img = loadImage("cover.webp", () => {
-        roundedMask = createRoundedMask(img.width, img.height, coverRoundingInPx);
-        img = img.get();
+        roundedMask = createRoundedMask(img.width, img.height, coverImgRoundingInPx);
         img.mask(roundedMask);
+        coverImgEl.style.opacity = 0;
       });
     }
 
@@ -60,7 +68,10 @@
     }
 
     function setup() {
-      createCanvas(windowWidth, windowHeight);
+      const imgBounds = coverImgEl.getBoundingClientRect()
+      const extraSize = coverImgMarginInPx * 2
+      canvasEl = createCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
+      canvasEl.parent('#container');
       imageMode(CENTER);
       noSmooth();
       planNextGlitch();
@@ -69,54 +80,40 @@
     // todo пусть иногда то увеличивается, то уменьшается
     const deformFactor = 3
 
-    function drawCover() {
-      const imgAspect = img.width / img.height;
-      const maxW = Math.min(img.width, width * 0.8);
-      const maxH = Math.min(img.height, height * 0.8);
-      let w, h;
-      if (maxW / maxH > imgAspect) {
-        h = maxH;
-        w = h * imgAspect;
-      } else {
-        w = maxW;
-        h = w / imgAspect;
-      }
-
+    function drawCover(imgWidth, imgHeight) {
       let cx = width / 2;
       let cy = height / 2;
 
       let yStep = 2;
-      for (let y = 0; y < h; y += yStep) {
+      for (let y = 0; y < imgHeight; y += yStep) {
         let offset = (noise(y * 0.02, millis() * 0.0005) - 0.5) * deformFactor;
         image(
           img,
           cx + offset,
-          cy - h / 2 + y,
-          w,
+          cy - imgHeight / 2 + y,
+          imgWidth,
           yStep,
           0,
-          (y / h) * img.height,
+          (y / imgHeight) * img.height,
           img.width,
-          (yStep / h) * img.height
+          (yStep / imgHeight) * img.height
         );
       }
     }
 
-    function glitch() {
-      let w = 500;
-      let h = 500;
+    function drawGlitch(imgWidth, imgHeight) {
       let cx = width / 2;
       let cy = height / 2;
 
       push();
       imageMode(CORNER);
-      translate(cx - w / 2, cy - h / 2);
+      translate(cx - imgWidth / 2, cy - imgHeight / 2);
       tint(255, random(50, 255)); // прозрачность глитча
 
-      const count = random(5, 40)
+      const count = random(5, 30)
       for (let i = 0; i < count; i++) {
-        let sx = random(img.width + 500);
-        let sy = random(img.height + 200);
+        let sx = random(img.width + 50);
+        let sy = random(img.height + 20);
         let sw = random(10, 50);
         let sh = random(5, 20);
 
@@ -131,19 +128,21 @@
     }
 
     function draw() {
-      // todo пусть глитч иногда остается на какое-то время
-      {#if (Math.random() < 0.01) {#}
-      {#  background(0);#}
-      {# }#}
-      background(0);
+      // пусть глитч иногда "зависает"
+      // if (Math.random() < 0.01) {
+      //   clear();
+      // }
 
-      // Проверка глитча
-      let isGlitching = millis() < glitchTime;
+      clear();
 
-      drawCover()
+      const imgBounds = coverImgEl.getBoundingClientRect();
+      const imgWidth = imgBounds.width;
+      const imgHeight = imgBounds.height;
 
-      if (isGlitching) {
-        glitch();
+      drawCover(imgWidth, imgHeight);
+
+      if (millis() < glitchTime) {
+        drawGlitch(imgWidth, imgHeight);
       }
 
       // Запускаем новый глитч, если пора
@@ -154,8 +153,10 @@
     }
 
     function windowResized() {
-      resizeCanvas(windowWidth, windowHeight);
-    }
+      const imgBounds = coverImgEl.getBoundingClientRect()
+      const extraSize = coverImgMarginInPx * 2
+      resizeCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
+     }
   </script>
 {% endblock %}
 
@@ -174,7 +175,7 @@
 
     body {
       margin: 0;
-    {#background: #221a15;#} background: #000;
+      background: #221a15;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -182,19 +183,12 @@
       overflow: hidden;
     }
 
-    #album-container {
-      position: relative;
-      width: 500px;
-      height: 500px;
-      z-index: 2;
-    }
-
     #album-img {
+      aspect-ratio: 1 / 1;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      user-select: none;
-      pointer-events: none;
+      max-width: 500px;
+      max-height: 500px;
+      border-radius: 10px;  /* todo 1rem */
     }
 
     canvas {
@@ -202,7 +196,6 @@
       top: 0;
       left: 0;
       z-index: 1;
-      pointer-events: none;
     }
   </style>
 {% endblock %}
