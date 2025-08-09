@@ -512,7 +512,7 @@
       width: 100vw;
       height: 100vh;
 
-      background-image: url('bg.jpg');
+      background-image: url('bg.webp');
       background-size: cover;
       background-position: center;
 
@@ -546,7 +546,7 @@
     #background-noise {
       position: fixed;
       inset: 0;
-      background-image: url('noise.png');
+      background-image: url('noise.webp');
       background-size: cover;
       opacity: 0.03;
       transform: scale(1.4);
@@ -558,7 +558,7 @@
     #background-rgb-shift {
       position: fixed;
       inset: 0;
-      background-image: url('bg.jpg');
+      background-image: url('bg.webp');
       background-size: cover;
       background-position: center;
       filter: blur(12px) contrast(1.05) saturate(1.1);
@@ -603,6 +603,10 @@
       max-width: 500px;
       max-height: 500px;
       border-radius: {{ constants.cover_img_rounding_in_px }}px; /* todo 1rem */
+    }
+
+    #p5_loading {
+      display: none;
     }
 
     canvas {
