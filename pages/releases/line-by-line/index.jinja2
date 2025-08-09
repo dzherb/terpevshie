@@ -46,6 +46,28 @@
           onerror="this.alt='не удалось загрузить изображение...';"
         >
       </div>
+      <div id="tracklist">
+        {% set tracks = [
+          {"title": "веришь", "src": "/releases/line-by-line/audio/веришь.mp3"},
+          {"title": "решето", "src": "/releases/line-by-line/audio/решето.mp3"},
+          {"title": "вымысел", "src": "/releases/line-by-line/audio/вымысел.mp3"},
+          {"title": "память", "src": "/releases/line-by-line/audio/память.mp3"},
+          {"title": "когда", "src": "/releases/line-by-line/audio/когда.mp3"},
+        ] %}
+
+        {% for track in tracks %}
+          <div class="track" data-src="{{ track.src }}">
+            <span class="title">{{ track.title }}</span>
+            <div class="controls">
+              <button class="play-btn">▶</button>
+              <div class="progress">
+                <canvas class="progress-noise"></canvas>
+                <div class="progress-bar"></div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     </div>
   </main>
 {% endblock %}
@@ -333,6 +355,108 @@
         }, 200);
       };
     });
+
+    /* AUDIO */
+    const tracks = document.querySelectorAll('.track');
+    let currentAudio = null;
+
+    tracks.forEach(track => {
+      const btn = track.querySelector('.play-btn');
+      const progressBar = track.querySelector('.progress-bar');
+      const noiseCanvas = track.querySelector('.progress-noise');
+      const ctx = noiseCanvas.getContext('2d');
+      const src = track.dataset.src;
+      const audio = new Audio(src);
+
+      // Начальное состояние
+      track.classList.add('paused');
+
+      // Рисуем шум в прогрессе
+      function drawNoise() {
+        const w = noiseCanvas.width;
+        const h = noiseCanvas.height;
+
+        if (w === 0 || h === 0) {
+          ctx.clearRect(0, 0, noiseCanvas.width, noiseCanvas.height);
+          return;
+        }
+
+        const imageData = ctx.createImageData(w, h);
+        const data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const v = Math.floor(Math.random() * 255);
+          data[i] = v;
+          data[i + 1] = v;
+          data[i + 2] = v;
+          data[i + 3] = 30; // прозрачность шума
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+      }
+
+      // Логика плеера
+      btn.addEventListener('click', () => {
+        if (currentAudio && currentAudio !== audio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          document.querySelectorAll('.track').forEach(t => {
+            t.classList.remove('playing');
+            t.classList.add('paused');
+            t.querySelector('.play-btn').textContent = '▶';
+          });
+        }
+
+        if (audio.paused) {
+          audio.play();
+          btn.textContent = '❚❚';
+          track.classList.remove('paused');
+          track.classList.add('playing');
+          currentAudio = audio;
+        } else {
+          audio.pause();
+          btn.textContent = '▶';
+          track.classList.remove('playing');
+          track.classList.add('paused');
+        }
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        const progress = (audio.currentTime / audio.duration) * 100 || 0;
+        progressBar.style.width = `${progress}%`;
+
+        let progressPx = noiseCanvas.parentElement.offsetWidth * (progress / 100);
+        if (progressPx < 1) progressPx = 1; // минимум 1px
+
+        noiseCanvas.style.width = progressPx + 'px';
+        noiseCanvas.width = progressPx; // обновляем внутреннее разрешение
+        noiseCanvas.height = progressBar.offsetHeight; // тоже обновляем высоту для четкости
+
+        drawNoise(); // перерисовываем шум после изменения размеров
+      });
+
+      audio.addEventListener('ended', () => {
+        btn.textContent = '▶';
+        progressBar.style.width = '0%';
+        noiseCanvas.style.width = '0px';
+        noiseCanvas.width = 0;
+        track.classList.remove('playing');
+        track.classList.add('paused');
+      });
+
+      // На случай, если размеры прогресс-бара поменяются
+      window.addEventListener('resize', () => {
+        const progress = (audio.currentTime / audio.duration) * 100 || 0;
+        let progressPx = noiseCanvas.parentElement.offsetWidth * (progress / 100);
+        if (progressPx < 1) progressPx = 1;
+
+        noiseCanvas.style.width = progressPx + 'px';
+        noiseCanvas.width = progressPx;
+        noiseCanvas.height = progressBar.offsetHeight;
+
+        drawNoise();
+      });
+    });
   </script>
 {% endblock %}
 
@@ -353,7 +477,6 @@
       margin: 0;
       background: #7a6559;
       min-height: 100vh;
-      overflow: hidden;
     }
 
     body::after {
@@ -440,7 +563,6 @@
       color: #e4dad2;
       margin: 4.6rem 2rem;
       max-width: 600px;
-      max-height: 600px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -454,7 +576,7 @@
 
     #cover-img-container {
       position: relative;
-      z-index: 10;
+      z-index: 5;
       padding: {{ constants.cover_img_padding_in_px }}px
     }
 
@@ -471,6 +593,88 @@
       top: 0;
       left: 0;
       z-index: 1;
+    }
+
+    #tracklist {
+      width: 100%;
+      max-width: 500px;
+      margin: 2rem auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    {% set track_bg_rgb = "99, 65, 44" %}
+
+    .track {
+      display: flex;
+      flex-direction: column;
+      background: rgba({{ track_bg_rgb }}, 0.25);
+      padding: 1rem;
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, background 0.5s ease, filter 1s ease;
+    }
+
+    .track.paused {
+      filter: grayscale(0.1) brightness(0.9);
+    }
+
+    .track.playing {
+      background: rgba({{ track_bg_rgb }}, 0.5);
+      box-shadow: 0 0 30px rgba(251, 199, 153, 0.2);
+    }
+
+    .track:not(.playing):hover {
+      transform: translateY(-2px);
+      background: rgba({{ track_bg_rgb }}, 0.35);
+    }
+
+    .track .controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .play-btn {
+      background: none;
+      border: none;
+      height: 1.5rem;
+      color: #e4dad2;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .title {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      overflow: hidden;
+      border-radius: 3px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, rgba(251, 199, 153, 0.7), rgba(255, 255, 255, 0.3));
+      transition: width 0.1s linear;
+    }
+
+    .progress-noise {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0;
+      pointer-events: none;
+      z-index: 2;
     }
   </style>
 {% endblock %}
