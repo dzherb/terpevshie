@@ -23,7 +23,7 @@
   {{ navbar.html() }}
   <main style="width: 100%; display: flex; justify-content: center; align-items: center;">
     <div style="padding: 4.2rem 2rem;">
-      <div id="container" style="position: relative; padding: {{ constants.cover_img_padding_in_px }}px">
+      <div id="container" style="position: relative; z-index: 10; padding: {{ constants.cover_img_padding_in_px }}px">
         <img
           fetchpriority="high"
           id="album-img"
@@ -48,17 +48,17 @@
     const coverImgPaddingInPx = {{ constants.cover_img_padding_in_px }};
 
     const coverImgEl = document.getElementById('album-img')
-    let canvasEl = null;
+    let canvasEl;
 
     function createSmoothValue(min, max, periodMs, phase = 0) {
       // min, max — границы
-      // periodMs — полный цикл (в миллисекундах), например 4000 для 4 секунд
+      // periodMs — полный цикл (в миллисекундах)
       // phase — сдвиг по времени (0..1), чтобы сделать несколько значений с разной фазой
 
       return {
         get() {
-          const t = (performance.now() % periodMs) / periodMs; // от 0 до 1
-          const easedT = 0.5 + 0.5 * Math.sin(2 * Math.PI * (t + phase)); // от 0 до 1 с easing
+          const t = (performance.now() % periodMs) / periodMs;
+          const easedT = 0.5 + 0.5 * Math.sin(2 * Math.PI * (t + phase));
           return min + easedT * (max - min);
         }
       };
@@ -82,12 +82,12 @@
     }
 
     function planNextGlitch() {
-      nextGlitch = millis() + random(1000, random(4000, 13000))
+      nextGlitch = millis() + random(1000, random(4000, 13000));
     }
 
     function setup() {
-      const imgBounds = coverImgEl.getBoundingClientRect()
-      const extraSize = coverImgPaddingInPx * 2
+      const imgBounds = coverImgEl.getBoundingClientRect();
+      const extraSize = coverImgPaddingInPx * 2;
       canvasEl = createCanvas(imgBounds.width + extraSize, imgBounds.height + extraSize);
       canvasEl.parent('#container');
       imageMode(CENTER);
@@ -95,7 +95,7 @@
       planNextGlitch();
     }
 
-    let deformFactor = createSmoothValue(2, 5, 11000)
+    let deformFactor = createSmoothValue(2, 5, 11000);
 
     function drawCover(imgWidth, imgHeight) {
       let cx = width / 2;
@@ -127,17 +127,15 @@
       push();
       imageMode(CORNER);
       translate(cx - imgWidth / 2, cy - imgHeight / 2);
-      tint(255, random(50, 255)); // Прозрачность глитча
+      tint(255, random(50, 255));
 
       const count = random(5, 30);
       for (let i = 0; i < count; i++) {
-        // Source rect в пикселях оригинального изображения
         let swSrc = random(10, 50 * glitchFactor.get());
         let shSrc = random(5, 20 * glitchFactor.get());
         let sx = random(img.width - swSrc);
         let sy = random(img.height - shSrc);
 
-        // Размеры и позиция на canvas (пропорционально imgWidth/imgHeight)
         let sw = (swSrc / img.width) * imgWidth;
         let sh = (shSrc / img.height) * imgHeight;
         let dx = (sx / img.width) * imgWidth + random(-5, 5);
@@ -147,6 +145,60 @@
       }
 
       pop();
+      noTint();
+    }
+
+    function drawCutGlitch(imgWidth, imgHeight) {
+      let cx = width / 2;
+      let cy = height / 2;
+      push();
+      imageMode(CORNER);
+      translate(cx - imgWidth / 2, cy - imgHeight / 2);
+
+      let stripsCount = floor(random(2, 6));
+      for (let i = 0; i < stripsCount; i++) {
+        let stripHeight = random(imgHeight * 0.05, imgHeight * 0.15);
+        let y = random(0, imgHeight - stripHeight);
+        let xOffset = random(-15, 15);
+
+        // копируем часть изображения со сдвигом по X
+        copy(0, y, imgWidth, stripHeight, xOffset, y, imgWidth, stripHeight);
+      }
+      pop();
+    }
+
+    const RGBShiftIntensityFactor = createSmoothValue(40, 100, 24000)
+    const rgbShiftAmount = 3;
+    const redPhase = 0;
+    const greenPhase = 0.33;
+    const bluePhase = 0.66;
+    const shiftRFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, redPhase);
+    const shiftGFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, greenPhase);
+    const shiftBFactor = createSmoothValue(0.5 * rgbShiftAmount, 1 * rgbShiftAmount, 4000, bluePhase);
+
+    // RGB сдвиг — отдельно рисуем 3 слоя с цветовым сдвигом и прозрачностью
+    function drawRGBShift(imgWidth, imgHeight) {
+      let cx = width / 2;
+      let cy = height / 2;
+
+      push();
+      imageMode(CENTER);
+      blendMode(SCREEN);
+
+      const intensity = RGBShiftIntensityFactor.get()
+
+      tint(255, 0, 0, intensity);
+      image(img, cx - shiftRFactor.get(), cy, imgWidth, imgHeight);
+
+      tint(0, 255, 0, intensity);
+      image(img, cx, cy + shiftGFactor.get(), imgWidth, imgHeight);
+
+      tint(0, 0, 255, intensity);
+      image(img, cx + shiftBFactor.get(), cy, imgWidth, imgHeight);
+
+      pop();
+
+      blendMode(BLEND);
       noTint();
     }
 
@@ -162,15 +214,18 @@
 
       drawCover(imgWidth, imgHeight);
 
+      // Включаем глитч
       if (millis() < glitchTime) {
-        drawGlitch(imgWidth, imgHeight);
+        Math.random() > 0.2 ? drawGlitch(imgWidth, imgHeight) : drawCutGlitch(imgWidth, imgHeight);
       }
 
-      // Запускаем новый глитч, если пора
       if (millis() > nextGlitch) {
         glitchTime = millis() + random(300, 800); // длительность глитча
         planNextGlitch();
       }
+
+      // Рисуем RGB сдвиг с небольшой прозрачностью (создает размытие цвета)
+      drawRGBShift(imgWidth, imgHeight);
     }
 
     function windowResized() {
