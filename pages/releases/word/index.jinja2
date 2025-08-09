@@ -218,17 +218,22 @@
       return {top: fallbackTop, left: fallbackLeft};
     }
 
+    let textsCount = 0;
+    const maxTextsCount = 50;  // set upper limit to avoid leaks
+
     async function runCycle() {
       const width = window.innerWidth;
 
-      let count
+      let textsToAdd
       if (width < 500) {
-        count = Math.floor(getRandom(2, 5));
+        textsToAdd = Math.floor(getRandom(2, 5));
       } else if (width < 900) {
-        count = Math.floor(getRandom(5, 15));
+        textsToAdd = Math.floor(getRandom(5, 15));
       } else {
-        count = Math.floor(getRandom(5, 30));
+        textsToAdd = Math.floor(getRandom(5, 30));
       }
+
+      textsToAdd = Math.min(textsToAdd, maxTextsCount - textsCount);
 
       const typingDelay = getRandom(60, 120);
 
@@ -236,7 +241,7 @@
       usedAreas.length = 0; // очищаем перед новым циклом
 
       const seriesIndex = Math.floor(getRandom(0, strings.length));
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < textsToAdd; i++) {
         const text = strings[seriesIndex][Math.floor(Math.random() * strings[seriesIndex].length)];
 
         const fontSize = getRandom(30, 60);
@@ -250,10 +255,14 @@
 
         promises.push(
           setTimeout(() => {
+            textsCount++
             typeText(el, text, typingDelay).then(() => {
               setTimeout(() => {
                 el.style.opacity = '0';
-                setTimeout(() => el.remove(), 2000);
+                setTimeout(() => {
+                  textsCount--
+                  el.remove()
+                }, 2000);
               }, 2000);
             })
           }, getRandom(0, 2000))
