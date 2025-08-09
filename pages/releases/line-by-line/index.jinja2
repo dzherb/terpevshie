@@ -24,6 +24,7 @@
 
 {# Components #}
 {% import '../../common/jinja/components/navbar.jinja2' as navbar %}
+{% import '../../common/jinja/components/links.jinja2' as links %}
 
 {% block content %}
   <div id="background-image"></div>
@@ -46,6 +47,15 @@
           onerror="this.alt='не удалось загрузить изображение...';"
         >
       </div>
+
+      {{ links.html([
+        {"title": "яндекс", "src": "https://music.yandex.ru/album/37683861"},
+        {"title": "vk", "src": "https://vk.com/wall-220989745_45"},
+        {"title": "spotify", "src": "https://open.spotify.com/album/7DYTpsjFViG1secFxkDdu2"},
+        {"title": "apple", "src": "https://itunes.apple.com/album/id/1831075175"},
+        {"title": "youtube", "src": "https://www.youtube.com/watch?v=4Tt6tuld5T0&list=OLAK5uy_lOAioxBliQKKpWQB0pFxv0Jng0UNOCP5o"},
+      ]) }}
+
       <div id="tracklist">
         {% set tracks = [
           {"title": "веришь", "src": "/releases/line-by-line/audio/веришь.mp3"},
@@ -359,8 +369,9 @@
     /* AUDIO */
     const tracks = document.querySelectorAll('.track');
     let currentAudio = null;
+    let currentTrackIndex = -1;
 
-    tracks.forEach(track => {
+    tracks.forEach((track, index) => {
       const btn = track.querySelector('.play-btn');
       const progressBar = track.querySelector('.progress-bar');
       const noiseCanvas = track.querySelector('.progress-noise');
@@ -371,7 +382,6 @@
       // Начальное состояние
       track.classList.add('paused');
 
-      // Рисуем шум в прогрессе
       function drawNoise() {
         const w = noiseCanvas.width;
         const h = noiseCanvas.height;
@@ -389,18 +399,17 @@
           data[i] = v;
           data[i + 1] = v;
           data[i + 2] = v;
-          data[i + 3] = 30; // прозрачность шума
+          data[i + 3] = 30;
         }
 
         ctx.putImageData(imageData, 0, 0);
       }
 
-      // Логика плеера
       btn.addEventListener('click', () => {
         if (currentAudio && currentAudio !== audio) {
           currentAudio.pause();
           currentAudio.currentTime = 0;
-          document.querySelectorAll('.track').forEach(t => {
+          tracks.forEach(t => {
             t.classList.remove('playing');
             t.classList.add('paused');
             t.querySelector('.play-btn').textContent = '▶';
@@ -413,6 +422,7 @@
           track.classList.remove('paused');
           track.classList.add('playing');
           currentAudio = audio;
+          currentTrackIndex = index;
         } else {
           audio.pause();
           btn.textContent = '▶';
@@ -426,13 +436,13 @@
         progressBar.style.width = `${progress}%`;
 
         let progressPx = noiseCanvas.parentElement.offsetWidth * (progress / 100);
-        if (progressPx < 1) progressPx = 1; // минимум 1px
+        if (progressPx < 1) progressPx = 1;
 
         noiseCanvas.style.width = progressPx + 'px';
-        noiseCanvas.width = progressPx; // обновляем внутреннее разрешение
-        noiseCanvas.height = progressBar.offsetHeight; // тоже обновляем высоту для четкости
+        noiseCanvas.width = progressPx;
+        noiseCanvas.height = progressBar.offsetHeight;
 
-        drawNoise(); // перерисовываем шум после изменения размеров
+        drawNoise();
       });
 
       audio.addEventListener('ended', () => {
@@ -442,9 +452,14 @@
         noiseCanvas.width = 0;
         track.classList.remove('playing');
         track.classList.add('paused');
+
+        // Автоматический переход к следующему треку (циклично)
+        let nextIndex = (index + 1) % tracks.length;
+        const nextTrack = tracks[nextIndex];
+        const nextBtn = nextTrack.querySelector('.play-btn');
+        nextBtn.click();
       });
 
-      // На случай, если размеры прогресс-бара поменяются
       window.addEventListener('resize', () => {
         const progress = (audio.currentTime / audio.duration) * 100 || 0;
         let progressPx = noiseCanvas.parentElement.offsetWidth * (progress / 100);
@@ -457,6 +472,7 @@
         drawNoise();
       });
     });
+
   </script>
 {% endblock %}
 
@@ -472,6 +488,7 @@
     }
 
     {{ navbar.styles() }}
+    {{ links.styles() }}
 
     body {
       margin: 0;
@@ -561,7 +578,7 @@
 
     #release-card {
       color: #e4dad2;
-      margin: 4.6rem 2rem;
+      margin: 6rem 2rem;
       max-width: 600px;
       display: flex;
       flex-direction: column;
@@ -598,7 +615,7 @@
     #tracklist {
       width: 100%;
       max-width: 500px;
-      margin: 2rem auto 0;
+      margin: 1rem auto 0;
       display: flex;
       flex-direction: column;
       gap: 1rem;
