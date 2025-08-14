@@ -14,6 +14,7 @@
   <meta property="og:type" content="website">
   {% include '../../common/jinja/includes/font_old_standard.html' %}
   {% include '../../common/jinja/includes/favicon_tags.html' %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" defer></script>
 {% endblock %}
 
 {% set constants = {
@@ -27,11 +28,11 @@
 {% import '../../common/jinja/components/links.jinja2' as links %}
 
 {% block content %}
-  <div id="background-wrapper">
-    <div id="background-image"></div>
-    <div id="background-color-overlay"></div>
-    <div id="background-noise"></div>
-    <div id="background-rgb-shift"></div>
+  <div id="bg-wrapper">
+    <div id="bg-image"></div>
+    <div id="bg-overlay"></div>
+    <div id="bg-noise"></div>
+    <div id="bg-shift"></div>
   </div>
 
   {{ navbar.html() }}
@@ -43,7 +44,6 @@
         <img
           fetchpriority="high"
           id="cover-img"
-          class="hover-scale"
           src="cover.webp"
           alt="обложка альбома"
           onerror="this.alt='не удалось загрузить изображение...';"
@@ -60,18 +60,18 @@
 
       <div id="tracklist">
         {% set tracks = [
-          {"title": "веришь", "src": "/releases/line-by-line/audio/веришь.mp3"},
-          {"title": "решето", "src": "/releases/line-by-line/audio/решето.mp3"},
-          {"title": "вымысел", "src": "/releases/line-by-line/audio/вымысел.mp3"},
-          {"title": "память", "src": "/releases/line-by-line/audio/память.mp3"},
-          {"title": "когда", "src": "/releases/line-by-line/audio/когда.mp3"},
+          {"title": "веришь", "src": "./audio/веришь.mp3"},
+          {"title": "решето", "src": "./audio/решето.mp3"},
+          {"title": "вымысел", "src": "./audio/вымысел.mp3"},
+          {"title": "память", "src": "./audio/память.mp3"},
+          {"title": "когда", "src": "./audio/когда.mp3"},
         ] %}
 
         {% for track in tracks %}
           <div class="track paused" data-src="{{ track.src }}">
-            <span class="title">{{ track.title }}</span>
+            <span>{{ track.title }}</span>
             <div class="controls">
-              <button class="play-btn">
+              <button class="play-btn" aria-label="включить композицию &quot;{{ track.title }}&quot;">
                 <!-- play icon -->
                 <svg class="icon icon-play" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                   <polygon points="5,3 19,12 5,21" fill="currentColor"></polygon>
@@ -96,8 +96,59 @@
 {% endblock %}
 
 {% block script %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script>
+    /* BACKGROUND */
+
+    let mouseX = 0, mouseY = 0;
+    let targetX = 0, targetY = 0;
+
+    // parallax
+    document.addEventListener('mousemove', e => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * -2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    const bgEl = document.querySelector('#bg-image');
+    const noiseEl = document.querySelector('#bg-noise');
+    const bgShiftEl = document.querySelector('#bg-shift');
+
+    function animateBackground() {
+      const t = performance.now()
+
+      // Медленно интерполируем targetX/Y к mouseX/Y (инерция)
+      targetX += (mouseX - targetX) * 0.02;
+      targetY += (mouseY - targetY) * 0.02;
+
+      const parallaxX = targetX * 30; // px
+      const parallaxY = targetY * 30; // px
+
+
+      const scale = {{ constants.bg_img_scale }} + Math.sin(t / 4000) * 0.015;
+      bgEl.style.transform = `scale(${scale}, -${scale}) translate(${parallaxX}px, ${parallaxY}px)`;
+
+      // Движение шума
+      {#noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;#}
+
+      // Лёгкое цветовое смещение
+      const shiftX = Math.sin(t / 2000) * 50; // пиксели
+      bgShiftEl.style.transform = `scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(${shiftX}px)`;
+
+      requestAnimationFrame(animateBackground);
+    }
+
+    animateBackground();
+
+    // todo for bg in bgs
+    const bgImg = new Image();
+    bgImg.src = getComputedStyle(bgEl).backgroundImage.replace(/url\((['"])?(.*?)\1\)/, '$2');
+    bgImg.onload = () => {
+      setTimeout(() => {
+        bgEl.classList.add('visible');
+      }, 200);
+    };
+
+    /* COVER EFFECTS */
+
     {% set cover_img_extra_size = constants.cover_img_padding_in_px * 2 %}
 
     let img;
@@ -324,60 +375,6 @@
       );
     }
 
-    /* BACKGROUND */
-
-    let mouseX = 0, mouseY = 0;
-    let targetX = 0, targetY = 0;
-
-    document.addEventListener('mousemove', e => {
-      mouseX = (e.clientX / window.innerWidth - 0.5) * -2; // -1..1
-      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-    });
-
-    const bgEl = document.querySelector('#background-image');
-    const noiseEl = document.querySelector('#background-noise');
-    const rgbShiftEl = document.querySelector('#background-rgb-shift');
-
-    function animateBackground() {
-      const t = performance.now()
-
-      // Медленно интерполируем targetX/Y к mouseX/Y (инерция)
-      targetX += (mouseX - targetX) * 0.02;
-      targetY += (mouseY - targetY) * 0.02;
-
-      const parallaxX = targetX * 30; // px
-      const parallaxY = targetY * 30; // px
-
-
-      const scale = {{ constants.bg_img_scale }} + Math.sin(t / 4000) * 0.015;
-      bgEl.style.transform = `scale(${scale}, -${scale}) translate(${parallaxX}px, ${parallaxY}px)`;
-
-      // Движение шума
-      {#noiseEl.style.backgroundPosition = `${Math.random() * 100}% ${Math.random() * 100}%`;#}
-
-      // Лёгкое цветовое смещение
-      const shiftX = Math.sin(t / 2000) * 50; // пиксели
-      rgbShiftEl.style.transform = ` scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(${shiftX}px)`;
-
-      // Цветовой перелив через hue-rotate
-      {#const hue = (t / 5) % 360;#}
-      {#rgbShiftEl.style.filter = `blur(12px) contrast(1.05) saturate(1.1) hue-rotate(${hue}deg)`;#}
-
-      requestAnimationFrame(animateBackground);
-    }
-
-    animateBackground();
-
-    window.addEventListener('load', () => {
-      const img = new Image();
-      img.src = getComputedStyle(bgEl).backgroundImage.replace(/url\((['"])?(.*?)\1\)/, '$2');
-      img.onload = () => {
-        setTimeout(() => {
-          bgEl.classList.add('visible');
-        }, 200);
-      };
-    });
-
     /* AUDIO */
 
     const tracks = document.querySelectorAll('.track');
@@ -390,7 +387,7 @@
       const noiseCanvas = track.querySelector('.progress-noise');
       const ctx = noiseCanvas.getContext('2d');
       const src = track.dataset.src;
-      const audio = new Audio(src);
+      const audio = new Audio(src);  // todo do not load immediately
 
       function drawNoise() {
         const w = noiseCanvas.width;
@@ -446,7 +443,7 @@
           touchStartX = e.touches[0].clientX;
           touchStartY = e.touches[0].clientY;
         }
-      });
+      }, {passive: true});
 
       track.addEventListener('touchend', (e) => {
         const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
@@ -504,9 +501,14 @@
 {% endblock %}
 
 {% block style %}
-  <link rel="stylesheet" href="/common/css/minireset.css">
   <style>
     {% include '../../common/jinja/includes/view_transition.css' %}
+
+    *, *::before, *::after {
+      box-sizing: inherit;
+      margin: 0;
+      padding: 0;
+    }
 
     .font-regular {
       font-family: "Old Standard TT", serif;
@@ -518,7 +520,6 @@
     {{ links.styles() }}
 
     body {
-      margin: 0;
       background: #7a6559;
       min-height: 100vh;
     }
@@ -532,21 +533,22 @@
       pointer-events: none;
     }
 
-    #background-wrapper {
+    #bg-wrapper {
       position: fixed;
       inset: 0;
       overflow: hidden;
       z-index: -3;
     }
 
-    #background-wrapper > div {
+    #bg-wrapper > div {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
 
-    #background-image {
+    #bg-image {
       background-image: url('bg.webp');
       background-size: cover;
       background-position: center;
@@ -557,34 +559,29 @@
       transition: opacity 3s ease;
 
       z-index: -3;
-      pointer-events: none;
       will-change: opacity, transform, filter;
     }
 
-    #background-image.visible {
+    #bg-image.visible {
       opacity: 0.5;
     }
 
-    #background-color-overlay {
+    #bg-overlay {
       background-color: rgba(244, 166, 98, 0.2);
       mix-blend-mode: overlay;
-
       z-index: -2;
-      pointer-events: none;
     }
 
-    #background-noise {
+    #bg-noise {
       opacity: 0.03;
       background-image: url('noise.webp');
       background-size: cover;
       transform: scale(1.4);
       mix-blend-mode: soft-light;
-
       z-index: -2;
-      pointer-events: none;
     }
 
-    #background-rgb-shift {
+    #bg-shift {
       opacity: 0.2;
       background-image: url('bg.webp');
       background-size: cover;
@@ -592,9 +589,7 @@
       filter: blur(12px) contrast(1.05) saturate(1.1);
       mix-blend-mode: screen;
       transform: scale({{ constants.bg_img_scale }}, -{{ constants.bg_img_scale }}) translateX(0);
-
       z-index: -1;
-      pointer-events: none;
     }
 
     main {
@@ -615,6 +610,7 @@
     }
 
     #release-card h1 {
+      font-weight: normal;
       margin: 0 1rem;
       font-size: 2.5rem;
     }
@@ -633,15 +629,14 @@
       border-radius: {{ constants.cover_img_rounding_in_px }}px; /* todo 1rem */
     }
 
-    #p5_loading {
-      display: none;
-    }
-
     canvas {
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
       z-index: 1;
+    }
+
+    #p5_loading {
+      display: none;
     }
 
     #tracklist {
@@ -681,6 +676,7 @@
       display: flex;
       gap: 0.5rem;
       align-items: center;
+      margin-top: 0.5rem;
     }
 
     .play-btn {
@@ -689,7 +685,7 @@
       border: none;
       height: 1.5rem;
       width: 2rem;
-      color: #e4dad2;
+      color: inherit;
       font-size: 1.2rem;
       cursor: pointer;
     }
@@ -714,15 +710,6 @@
       transform: translate(-50%, -50%) scale(1);
     }
 
-    .play-btn:hover {
-      filter: none;
-    }
-
-    .title {
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-    }
-
     .progress {
       position: relative;
       width: 100%;
@@ -741,8 +728,7 @@
 
     .progress-noise {
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
       height: 100%;
       width: 0;
       pointer-events: none;
