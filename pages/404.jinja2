@@ -1,20 +1,26 @@
 {% extends './common/jinja/layouts/fog.jinja2' %}
+{% set exclude_navbar = true %}
+{% set og_description = 'страница не найдена' %}
 
 {% block title %}
-  потерпевшие | 404
-{% endblock %}
-
-{% block extra_styles %}
-  .main-container h1 {
-    font-size: 6rem;
-    margin: 0;
-  }
-  .main-container a {
-    font-size: 1.5rem;
-  }
+  {{ super() }} | 404
 {% endblock %}
 
 {% block main %}
   <h1>404</h1>
   <a id="home-link" title="на главную" href="/">потерялись?</a>
 {% endblock %}
+
+<style>
+  {% block extra_styles %}
+    h1 {
+      font-size: 6rem;
+      line-height: 6rem;
+      margin-bottom: 0;
+    }
+
+    a {
+      font-size: 1.5rem;
+    }
+  {% endblock %}
+</style>

@@ -1,6 +1,6 @@
 {% macro html() %}
   <nav>
-    <a id="home-button" title="на главную" href="/">
+    <a title="на главную" href="/">
       <img id="logo-img" alt="лого потерпевших" src="/common/images/logo_no_bg.webp">
     </a>
   </nav>
@@ -8,11 +8,10 @@
 
 <style>
   {% macro styles() %}
-    nav a {
+    nav {
       position: fixed;
       z-index: 10;
-      top: 0.5rem;
-      left: 0.5rem;
+      padding: 0.5rem;
     }
 
     #logo-img {

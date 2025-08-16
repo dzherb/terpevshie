@@ -1,0 +1,42 @@
+{% extends '../common/jinja/layouts/fog.jinja2' %}
+{% set og_description = 'наши контакты' %}
+
+{% block title %}
+  {{ super() }} | контакты
+{% endblock %}
+
+{% block main %}
+  <h1>контакты</h1>
+  <div id="contacts">
+    <div class="contact-entry">
+      <span>email:</span>
+      <a title="связаться по почте" href="mailto:info@terpevshie.ru">info@terpevshie.ru</a>
+    </div>
+    <div class="contact-entry">
+      <span>telegram:</span>
+      <span>
+        <a title="написать Диме" target="_blank" href="https://t.me/dzherb">@dzherb</a>,
+        <a title="написать Саше" target="_blank" href="https://t.me/alex_yod">@alex_yod</a>
+      </span>
+    </div>
+  </div>
+{% endblock %}
+
+<style>
+  {% block extra_styles %}
+    #contacts {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2rem;
+      max-width: 500px;
+    }
+
+    .contact-entry {
+      flex-grow: 1;
+      display: flex;
+      justify-content: space-between;
+    }
+  {% endblock %}
+</style>

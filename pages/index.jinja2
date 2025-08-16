@@ -1,9 +1,33 @@
 {% extends './common/jinja/layouts/fog.jinja2' %}
+{% set exclude_navbar = true %}
 
 {% block main %}
-  <h1>
-    <a title="место обитания" target="_blank" href="https://t.me/terpevshie">
-      потерпевшие.
-    </a>
-  </h1>
+  <h1>потерпевшие.</h1>
+  <div id="contents">
+    <a href="{{ telegram_link }}" target="_blank">место обитания</a>
+    <a href="/releases">музыка</a>
+    {#    <a href="/video">видео</a>#}
+    <a href="/concerts">концерты</a>
+    <a href="/contacts">контакты</a>
+  </div>
 {% endblock %}
+
+<style>
+  {% block extra_styles %}
+    #contents {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2.5rem;
+      max-width: 500px;
+    }
+
+    @media screen and (max-width: {{ sm_breakpoint }}px) {
+      #contents {
+        flex-direction: column;
+        gap: 2rem;
+      }
+    }
+  {% endblock %}
+</style>

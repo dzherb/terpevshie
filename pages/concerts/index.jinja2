@@ -1,0 +1,12 @@
+{% extends '../common/jinja/layouts/fog.jinja2' %}
+{% set og_description = 'расписание концертов, билеты' %}
+
+{% block title %}
+  {{ super() }} | концерты
+{% endblock %}
+
+{% block main %}
+  <h1>концерты</h1>
+  <p>скоро..?</p>
+  <a title="к месту обитания" target="_blank" href="{{ telegram_link }}">следите за новостями</a>
+{% endblock %}
