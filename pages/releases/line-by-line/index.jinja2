@@ -502,13 +502,8 @@
 
 {% block style %}
   <style>
+    {% include '../../common/jinja/includes/simple_reset.css' %}
     {% include '../../common/jinja/includes/view_transition.css' %}
-
-    *, *::before, *::after {
-      box-sizing: inherit;
-      margin: 0;
-      padding: 0;
-    }
 
     .font-regular {
       font-family: "Old Standard TT", serif;
