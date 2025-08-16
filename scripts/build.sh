@@ -7,8 +7,7 @@ SOURCE_DIR="pages"
 SOURCE_EXCLUDE_DIR="common/jinja"
 BUILD_DIR="dist"
 
-[ -d "$BUILD_DIR" ] && rm -r $BUILD_DIR
-cp -R $SOURCE_DIR $BUILD_DIR
+rsync -a $SOURCE_DIR/ $BUILD_DIR/
 
 cd "$BUILD_DIR"
 
@@ -44,5 +43,6 @@ find . -path "./$SOURCE_EXCLUDE_DIR" -prune -o -type f -name "*.jinja2" -print \
   | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
 
 rm -r $SOURCE_EXCLUDE_DIR
+find . -name ".DS_Store" -delete
 
 echo "🏁 All done!"
