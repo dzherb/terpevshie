@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>бегство от гигантского комара</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#000;font-family:Arial,sans-serif;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  canvas{display:block}
+  #hud{position:fixed;top:10px;left:10px;color:#fff;text-shadow:0 0 4px #000;font-size:16px;z-index:5;pointer-events:none}
+  #warning{position:fixed;top:10px;right:10px;color:#ff4444;font-weight:bold;font-size:20px;text-shadow:0 0 6px #f00;z-index:5;display:none;animation:blink .4s infinite alternate;pointer-events:none}
+  @keyframes blink{from{opacity:1}to{opacity:.3}}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,10,.85);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center}
+  .overlay h1{font-size:30px;margin:10px}
+  .overlay p{font-size:15px;max-width:520px;line-height:1.55;padding:0 15px}
+  .btn{margin-top:20px;padding:16px 50px;font-size:24px;background:#2a7;color:#fff;border:none;border-radius:10px;cursor:pointer;touch-action:manipulation}
+  .btn:active{background:#3c9}
+  #gameover{display:none;background:rgba(40,0,0,.88)}
+  #controls{position:fixed;inset:0;z-index:6;display:none}
+  .ctrl{position:absolute;bottom:4%;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);border-radius:18px;
+    color:rgba(255,255,255,.8);font-size:42px;touch-action:none}
+  .ctrl.pressed{background:rgba(255,255,255,.25)}
+  #btnL{left:3%;width:26%;height:24%}
+  #btnR{right:3%;width:26%;height:24%}
+  #btnB{left:50%;transform:translateX(-50%);width:32%;height:16%;font-size:26px;bottom:5%}
+</style>
+</head>
+<body>
+<div id="hud">🏃 <span id="dist">0</span> м<br>🦟 <span id="mdist">--</span> м</div>
+<div id="warning">⚠ КОМАР РЯДОМ! ⚠</div>
+
+<audio id="bgm" src="./music.mp3" loop preload="auto"></audio>
+
+<div id="controls">
+  <div class="ctrl" id="btnL">⟲</div>
+  <div class="ctrl" id="btnR">⟳</div>
+  <div class="ctrl" id="btnB">👀 назад</div>
+</div>
+
+<div class="overlay" id="start">
+  <h1>🦟 БЕГСТВО ОТ КОМАРА</h1>
+  <p>Гигантский комар-мутант жаждет твоей крови! Бег <b>автоматический</b>.<br><br>
+  💻 ПК: <b>←/A</b> и <b>→/D</b> — повороты, <b>↓/S</b> — обернуться.<br>
+  📱 Телефон: экранные кнопки внизу.<br><br>
+  Не врезайся в дома — это замедляет, и комар догонит!<br>
+  Комар не умеет летать сквозь дома — прячься за высокими зданиями!</p>
+  <button class="btn" id="startBtn">БЕЖАТЬ!</button>
+</div>
+
+<div class="overlay" id="gameover">
+  <h1>🩸 ТЫ УКУШЕН!</h1>
+  <p>Комар выпил всю твою кровь...<br>Ты пробежал <b><span id="finalDist">0</span> метров</b></p>
+  <button class="btn" id="restartBtn">ЕЩЁ РАЗ</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ================= МАТЕМАТИЧЕСКИЙ ШУМ =================
+function hash2(x, y) {
+  let n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  return n - Math.floor(n);
+}
+function noise2(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  return hash2(xi, yi) * (1 - u) * (1 - v) +
+         hash2(xi + 1, yi) * u * (1 - v) +
+         hash2(xi, yi + 1) * (1 - u) * v +
+         hash2(xi + 1, yi + 1) * u * v;
+}
+function fbm(x, y) {
+  return noise2(x, y) * 0.65 + noise2(x * 2.13 + 7.7, y * 2.13 + 3.1) * 0.35;
+}
+
+// ================= ПАРАМЕТРЫ ГОРОДА =================
+const CELL = 22, B_HALF = 7.5, CHUNK = 6;
+const CHUNK_SIZE = CELL * CHUNK, VIEW_CHUNKS = 3;
+
+function isBuilding(cx, cz) {
+  if (Math.abs(cx) <= 2 && Math.abs(cz) <= 2) return false;
+  if (((cx % 5) + 5) % 5 === 0 || ((cz % 5) + 5) % 5 === 0) return false;
+  return fbm(cx * 0.31 + 5.7, cz * 0.31 + 9.2) > 0.42;
+}
+function buildingHeight(cx, cz) {
+  return 8 + fbm(cx * 0.18 + 41.3, cz * 0.18 + 17.9) * 50;
+}
+function buildingHalf(cx, cz) {
+  return B_HALF * (0.8 + hash2(cx * 1.7, cz * 2.9) * 0.2);
+}
+
+// ================= СЦЕНА =================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0e2a);
+scene.fog = new THREE.Fog(0x0a0e2a, 40, 230);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 400);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0x6677cc, 0x222233, 0.9));
+const moon = new THREE.DirectionalLight(0xaabbff, 0.7);
+moon.position.set(50, 100, 30);
+scene.add(moon);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(800, 800),
+  new THREE.MeshLambertMaterial({ color: 0x1a1a22 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// ================= ГЕНЕРАЦИЯ ЧАНКОВ =================
+const chunks = new Map();
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+boxGeo.translate(0, 0.5, 0);
+const palette = [0x39405e, 0x4a3a52, 0x2e4a4a, 0x52483a, 0x3a3a4f, 0x444a3a];
+
+function makeWindowsTexture(seed) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1b1f33'; g.fillRect(0, 0, 64, 128);
+  for (let y = 4; y < 124; y += 10)
+    for (let x = 4; x < 60; x += 10) {
+      const r = hash2(x * 3.1 + seed, y * 7.3 + seed);
+      g.fillStyle = r > 0.75 ? '#ffd97a' : (r > 0.6 ? '#7ab8ff' : '#10131f');
+      g.fillRect(x, y, 6, 7);
+    }
+  return new THREE.CanvasTexture(c);
+}
+const winTextures = [];
+for (let i = 0; i < 6; i++) winTextures.push(makeWindowsTexture(i * 13.7));
+
+const materials = [];
+for (let p = 0; p < palette.length; p++)
+  for (let t = 0; t < winTextures.length; t++)
+    materials.push(new THREE.MeshLambertMaterial({ color: palette[p], map: winTextures[t] }));
+
+function buildChunk(chx, chz) {
+  const group = new THREE.Group();
+  for (let i = 0; i < CHUNK; i++)
+    for (let j = 0; j < CHUNK; j++) {
+      const cx = chx * CHUNK + i, cz = chz * CHUNK + j;
+      if (!isBuilding(cx, cz)) continue;
+      const h = buildingHeight(cx, cz);
+      const half = buildingHalf(cx, cz);
+      const mi = Math.floor(hash2(cx * 3.3, cz * 5.1) * materials.length);
+      const m = new THREE.Mesh(boxGeo, materials[mi]);
+      m.scale.set(half * 2, h, half * 2);
+      m.position.set((cx + 0.5) * CELL, 0, (cz + 0.5) * CELL);
+      group.add(m);
+    }
+  scene.add(group);
+  return group;
+}
+
+function updateChunks(px, pz) {
+  const pcx = Math.floor(px / CHUNK_SIZE), pcz = Math.floor(pz / CHUNK_SIZE);
+  const need = new Set();
+  for (let dx = -VIEW_CHUNKS; dx <= VIEW_CHUNKS; dx++)
+    for (let dz = -VIEW_CHUNKS; dz <= VIEW_CHUNKS; dz++) {
+      const key = (pcx + dx) + ',' + (pcz + dz);
+      need.add(key);
+      if (!chunks.has(key)) chunks.set(key, buildChunk(pcx + dx, pcz + dz));
+    }
+  for (const [key, grp] of chunks) {
+    if (!need.has(key)) { scene.remove(grp); chunks.delete(key); }
+  }
+}
+
+// ================= КОМАР =================
+function createMosquito() {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 10), bodyMat);
+  body.scale.set(1, 0.8, 2.2); g.add(body);
+
+  const abdomen = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8),
+    new THREE.MeshLambertMaterial({ color: 0x6b1a1a }));
+  abdomen.scale.set(1, 0.9, 2.4); abdomen.position.set(0, 0.4, 4); abdomen.rotation.x = -0.3;
+  g.add(abdomen);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.9, 10, 8), bodyMat);
+  head.position.set(0, 0.2, -3.4); g.add(head);
+
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xff2222, emissive: 0x880000 });
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), eyeMat);
+    eye.position.set(s * 0.55, 0.45, -3.9); g.add(eye);
+  }
+
+  const probo = new THREE.Mesh(new THREE.ConeGeometry(0.15, 3.5, 6),
+    new THREE.MeshLambertMaterial({ color: 0x222222 }));
+  probo.rotation.x = -Math.PI / 2 - 0.25;
+  probo.position.set(0, -0.3, -5.5); g.add(probo);
+
+  const wingMat = new THREE.MeshLambertMaterial({
+    color: 0xbbccff, transparent: true, opacity: 0.4, side: THREE.DoubleSide
+  });
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const wg = new THREE.PlaneGeometry(5, 1.6);
+    wg.translate(s * 2.5, 0, 0);
+    const wing = new THREE.Mesh(wg, wingMat);
+    wing.position.set(0, 1.2, 0.5);
+    g.add(wing); wings.push({ mesh: wing, side: s });
+  }
+
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  for (let k = 0; k < 3; k++) for (const s of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 4, 4), legMat);
+    leg.position.set(s * 1.5, -1.5, -1.5 + k * 1.5);
+    leg.rotation.z = s * 0.8; leg.rotation.x = 0.3;
+    g.add(leg);
+  }
+  g.userData.wings = wings;
+  return g;
+}
+const mosquito = createMosquito();
+mosquito.scale.set(1.8, 1.8, 1.8);
+scene.add(mosquito);
+
+// ================= МУЗЫКА И ЗВУК =================
+const bgm = document.getElementById('bgm');
+bgm.volume = 0.5;
+
+let audioCtx = null, buzzGain = null;
+function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sawtooth'; osc.frequency.value = 160;
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 28;
+    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 35;
+    lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+    buzzGain = audioCtx.createGain(); buzzGain.gain.value = 0;
+    osc.connect(buzzGain); buzzGain.connect(audioCtx.destination);
+    osc.start(); lfo.start();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+
+// ================= СОСТОЯНИЕ =================
+const player = { x: 0, z: 0, yaw: 0, speed: 16, speedFactor: 1, distance: 0 };
+const mos = { x: 0, z: 80, y: 12 };
+let running = false, gameOver = false;
+let lookBackOffset = 0;
+let touchTurn = 0, touchBack = false;
+
+const keys = {};
+addEventListener('keydown', e => { keys[e.code] = true; });
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+function bindBtn(id, onDown, onUp) {
+  const el = document.getElementById(id);
+  const down = e => { e.preventDefault(); el.classList.add('pressed'); onDown(); };
+  const up = e => { e.preventDefault(); el.classList.remove('pressed'); onUp(); };
+  el.addEventListener('touchstart', down, { passive: false });
+  el.addEventListener('touchend', up, { passive: false });
+  el.addEventListener('touchcancel', up, { passive: false });
+  el.addEventListener('mousedown', down);
+  el.addEventListener('mouseup', up);
+  el.addEventListener('mouseleave', () => { el.classList.remove('pressed'); onUp(); });
+}
+bindBtn('btnL', () => touchTurn = 1, () => { if (touchTurn === 1) touchTurn = 0; });
+bindBtn('btnR', () => touchTurn = -1, () => { if (touchTurn === -1) touchTurn = 0; });
+bindBtn('btnB', () => touchBack = true, () => touchBack = false);
+
+renderer.domElement.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+renderer.domElement.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+function startGame() {
+  if (running) return;
+  document.getElementById('start').style.display = 'none';
+  if (isTouch) document.getElementById('controls').style.display = 'block';
+  initAudio();
+  bgm.play().catch(() => {}); // запуск музыки по клику — разрешено браузером
+  running = true;
+}
+const sBtn = document.getElementById('startBtn');
+sBtn.addEventListener('click', startGame);
+sBtn.addEventListener('touchend', e => { e.preventDefault(); startGame(); }, { passive: false });
+
+const rBtn = document.getElementById('restartBtn');
+rBtn.addEventListener('click', () => location.reload());
+rBtn.addEventListener('touchend', e => { e.preventDefault(); location.reload(); }, { passive: false });
+
+// ================= КОЛЛИЗИИ ИГРОКА =================
+function resolveCollisions() {
+  const R = 1.2;
+  const pcx = Math.floor(player.x / CELL), pcz = Math.floor(player.z / CELL);
+  let hit = false;
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+    const cx = pcx + dx, cz = pcz + dz;
+    if (!isBuilding(cx, cz)) continue;
+    const bx = (cx + 0.5) * CELL, bz = (cz + 0.5) * CELL;
+    const half = buildingHalf(cx, cz);
+    const nx = Math.max(bx - half, Math.min(player.x, bx + half));
+    const nz = Math.max(bz - half, Math.min(player.z, bz + half));
+    let ddx = player.x - nx, ddz = player.z - nz;
+    let d2 = ddx * ddx + ddz * ddz;
+    if (d2 < R * R) {
+      hit = true;
+      let d = Math.sqrt(d2);
+      if (d < 0.0001) {
+        const ox = player.x - bx, oz = player.z - bz;
+        if (Math.abs(ox) > Math.abs(oz)) player.x = bx + Math.sign(ox || 1) * (half + R);
+        else player.z = bz + Math.sign(oz || 1) * (half + R);
+      } else {
+        const push = (R - d) / d;
+        player.x += ddx * push;
+        player.z += ddz * push;
+      }
+    }
+  }
+  if (hit) player.speedFactor = Math.max(0.25, player.speedFactor - 0.08);
+}
+
+// ================= КОЛЛИЗИИ КОМАРА (не летает сквозь дома) =================
+function resolveMosquitoCollisions(dt) {
+  const R = 4; // радиус комара
+  const mcx = Math.floor(mos.x / CELL), mcz = Math.floor(mos.z / CELL);
+  let blocked = false;
+  for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+    const cx = mcx + dx, cz = mcz + dz;
+    if (!isBuilding(cx, cz)) continue;
+    const h = buildingHeight(cx, cz);
+    if (mos.y > h + 2) continue; // комар выше крыши — пролетает
+    const bx = (cx + 0.5) * CELL, bz = (cz + 0.5) * CELL;
+    const half = buildingHalf(cx, cz);
+    const nx = Math.max(bx - half, Math.min(mos.x, bx + half));
+    const nz = Math.max(bz - half, Math.min(mos.z, bz + half));
+    let ddx = mos.x - nx, ddz = mos.z - nz;
+    let d2 = ddx * ddx + ddz * ddz;
+    if (d2 < R * R) {
+      blocked = true;
+      let d = Math.sqrt(d2);
+      if (d < 0.0001) {
+        const ox = mos.x - bx, oz = mos.z - bz;
+        if (Math.abs(ox) > Math.abs(oz)) mos.x = bx + Math.sign(ox || 1) * (half + R);
+        else mos.z = bz + Math.sign(oz || 1) * (half + R);
+      } else {
+        const push = (R - d) / d;
+        mos.x += ddx * push;
+        mos.z += ddz * push;
+      }
+      // упёрся в дом — набирает высоту, чтобы перелететь
+      mos.y += 14 * dt;
+    }
+  }
+  return blocked;
+}
+
+// ================= КОНЕЦ ИГРЫ =================
+function endGame() {
+  gameOver = true; running = false;
+  if (buzzGain) buzzGain.gain.value = 0;
+  bgm.pause();
+    document.getElementById('controls').style.display = 'none';
+  document.getElementById('finalDist').textContent = Math.floor(player.distance);
+  document.getElementById('gameover').style.display = 'flex';
+}
+
+// ================= ИГРОВОЙ ЦИКЛ =================
+let lastT = performance.now();
+let bobPhase = 0;
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+
+  if (running && !gameOver) {
+    // --- ввод ---
+    let turn = touchTurn;
+    if (keys['ArrowLeft'] || keys['KeyA']) turn = 1;
+    if (keys['ArrowRight'] || keys['KeyD']) turn = -1;
+    const wantBack = touchBack || keys['ArrowDown'] || keys['KeyS'];
+
+    player.yaw += turn * 2.2 * dt;
+
+    const target = wantBack ? Math.PI : 0;
+    lookBackOffset += (target - lookBackOffset) * Math.min(1, dt * 8);
+
+    // --- движение игрока ---
+    player.speed = Math.min(24, player.speed + dt * 0.12);
+    player.speedFactor = Math.min(1, player.speedFactor + dt * 0.35);
+    const v = player.speed * player.speedFactor;
+    player.x -= Math.sin(player.yaw) * v * dt;
+    player.z -= Math.cos(player.yaw) * v * dt;
+    player.distance += v * dt;
+
+    resolveCollisions();
+    updateChunks(player.x, player.z);
+
+    // --- комар преследует (МЕДЛЕННЕЕ, чем раньше) ---
+    const mdx = player.x - mos.x, mdz = player.z - mos.z;
+    const mdist = Math.sqrt(mdx * mdx + mdz * mdz);
+    // комар чуть МЕДЛЕННЕЕ игрока на полной скорости —
+    // догоняет только когда ты тормозишь об дома или издалека (резиновый эффект)
+    const mSpeed = v - 1.5 + Math.min(8, mdist * 0.06);
+    if (mdist > 0.1 && mSpeed > 0) {
+      mos.x += (mdx / mdist) * mSpeed * dt;
+      mos.z += (mdz / mdist) * mSpeed * dt;
+    }
+
+    // --- коллизии комара с домами ---
+    const blocked = resolveMosquitoCollisions(dt);
+
+    // высота: парит над дорогой, но опускается обратно после перелёта домов
+    if (!blocked) {
+      const targetY = 6 + Math.sin(now * 0.002) * 2 + Math.max(0, mdist - 15) * 0.12;
+      mos.y += (targetY - mos.y) * dt * 1.5;
+    }
+    if (mos.y < 4) mos.y = 4;
+    if (mos.y > 70) mos.y = 70;
+
+    mosquito.position.set(mos.x, mos.y, mos.z);
+    mosquito.lookAt(player.x, 2, player.z);
+    for (const w of mosquito.userData.wings)
+      w.mesh.rotation.z = w.side * (0.3 + Math.sin(now * 0.09) * 0.6);
+
+    // --- камера ---
+    bobPhase += v * dt * 0.6;
+    const bobY = Math.sin(bobPhase) * 0.18;
+    const bobX = Math.cos(bobPhase * 0.5) * 0.1;
+    camera.position.set(
+      player.x + Math.cos(player.yaw) * bobX,
+      2.2 + bobY,
+      player.z - Math.sin(player.yaw) * bobX
+    );
+    camera.rotation.set(0, player.yaw + lookBackOffset, 0, 'YXZ');
+
+    ground.position.set(player.x, 0, player.z);
+
+    // --- HUD, жужжание, предупреждение ---
+    document.getElementById('dist').textContent = Math.floor(player.distance);
+    document.getElementById('mdist').textContent = Math.floor(mdist);
+    document.getElementById('warning').style.display = mdist < 25 ? 'block' : 'none';
+    if (buzzGain) buzzGain.gain.value = Math.min(0.2, 3 / Math.max(mdist, 4));
+
+    // --- укус ---
+    if (mdist < 4.5 && Math.abs(mos.y - 2.2) < 8) endGame();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ================= ЗАПУСК =================
+updateChunks(0, 0);
+mosquito.position.set(mos.x, mos.y, mos.z);
+requestAnimationFrame(animate);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

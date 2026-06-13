@@ -1,0 +1,29 @@
+{% extends '../common/jinja/layouts/fog.jinja2' %}
+
+{% block title %}
+  {{ super() }} | игры
+{% endblock %}
+
+{% block main %}
+  <h1>игры <span style="font-style: italic; opacity: 0.4;">(beta 0.0.1)</span></h1>
+  <div id="contents">
+    <a href="/games/bus">не мой автобус</a>
+    <a href="/games/forest">лес</a>
+    <a href="/games/mosqito">бегство от гигантского комара</a>
+    <a href="/games/warmix">warmix</a>
+  </div>
+{% endblock %}
+
+<style>
+  {% block extra_styles %}
+    #contents {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+      max-width: 500px;
+    }
+  {% endblock %}
+</style>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Бесконечный симулятор ходьбы по лесу</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050e14;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Отключаем стандартные жесты браузера на телефонах */
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        h1 { margin: 0 0 5px 0; font-size: 20px; font-weight: 300; letter-spacing: 2px; }
+        p { margin: 0; font-size: 12px; opacity: 0.8; }
+        #instructions {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            pointer-events: none;
+            font-size: 13px;
+            background: rgba(0,0,0,0.4);
+            padding: 8px 15px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+    </style>
+    <!-- Подключаем Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui">
+        <!-- <h1>Шёпот Леса</h1> -->
+        <!-- <p>Генератор бесконечной прогулки</p> -->
+    </div>
+    <!-- <div id="instructions">Загрузка...</div> -->
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- Настройки ---
+        const VIEW_DISTANCE = 100; // Немного уменьшено для мобильных
+        const CHUNK_SIZE = 20;
+        const TREE_DENSITY = 12;   // Оптимально для телефонов
+        const WALK_SPEED = 1.5;
+
+        // Определение мобильного устройства
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Установка текста инструкции
+        // const instDiv = document.getElementById('instructions');
+        // instDiv.innerText = isMobile ? "Управляйте обзором, проводя пальцем по экрану" : "Двигайте мышью, чтобы осмотреться";
+
+        // --- Инициализация сцены ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        scene.background = new THREE.Color(0x1a120b);
+        scene.fog = new THREE.FogExp2(0x1a120b, 0.018);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, VIEW_DISTANCE);
+        camera.position.set(0, 1.8, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: !isMobile }); // Отключаем сглаживание на слабых телефонах для скорости
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        // Ограничиваем разрешение на экранах с высоким DPI (Retina), чтобы не тормозило
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        // --- Освещение ---
+        const ambientLight = new THREE.AmbientLight(0x201a15, 0.7);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffba70, 2.5);
+        sunLight.position.set(60, 15, -60);
+        sunLight.castShadow = true;
+
+        // Оптимизация теней для мобильных устройств
+        sunLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
+        sunLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 150;
+        const d = 50;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
+
+        const skyLight = new THREE.HemisphereLight(0x354555, 0x111115, 0.4);
+        scene.add(skyLight);
+
+        // --- Земля ---
+        const floorGeo = new THREE.PlaneGeometry(VIEW_DISTANCE * 2, VIEW_DISTANCE * 2);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x11160c, roughness: 0.9 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- Генерация по шуму ---
+        function getPathNoise(x, z) {
+            const pathX = Math.sin(z * 0.03) * 15 + Math.cos(z * 0.01) * 5;
+            const distanceToPath = Math.abs(x - pathX);
+            return Math.max(0, 1 - (distanceToPath / 6));
+        }
+
+        function hash2D(x, z) {
+            const sx = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+            return sx - Math.floor(sx);
+        }
+
+        // --- Деревья (Оптимизированная геометрия) ---
+        const trunkGeo = new THREE.CylinderGeometry(0.15, 0.22, 6, 4); // 4 грани вместо 5
+        const leavesGeo = new THREE.ConeGeometry(1.6, 5, 4);          // 4 грани вместо 5
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x1d1510, roughness: 0.9 });
+        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x0c1e10, roughness: 0.8 });
+
+        function createTree() {
+            const tree = new THREE.Group();
+
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 3;
+            trunk.castShadow = !isMobile; // На телефонах тени отбрасывают только листья для экономии энергии
+            trunk.receiveShadow = true;
+            tree.add(trunk);
+
+            for(let i = 0; i < 2; i++) { // 2 слоя листвы вместо 3 для мобильных
+                const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                leaves.position.y = 4.5 + (i * 1.8);
+                const scale = 1 - (i * 0.25);
+                leaves.scale.set(scale, scale, scale);
+                leaves.castShadow = true;
+                leaves.receiveShadow = true;
+                tree.add(leaves);
+            }
+            return tree;
+        }
+
+        // --- Управление Чанками ---
+        const chunks = new Map();
+        const activeTrees = [];
+
+        function spawnChunk(cx, cz) {
+            const chunkKey = `${cx},${cz}`;
+            if (chunks.has(chunkKey)) return;
+
+            const chunkGroup = new THREE.Group();
+            const startX = cx * CHUNK_SIZE;
+            const startZ = cz * CHUNK_SIZE;
+
+            for (let i = 0; i < TREE_DENSITY; i++) {
+                const rx = hash2D(startX + i, startZ) * CHUNK_SIZE;
+                const rz = hash2D(startX, startZ + i) * CHUNK_SIZE;
+                const x = startX + rx;
+                const z = startZ + rz;
+
+                const pathVal = getPathNoise(x, z);
+
+                if (pathVal < 0.15) {
+                    const tree = createTree();
+                    tree.position.set(x, 0, z);
+
+                    const scale = 0.7 + hash2D(x, z) * 0.6;
+                    tree.scale.set(scale, scale, scale);
+                    tree.rotation.y = hash2D(z, x) * Math.PI * 2;
+
+                    chunkGroup.add(tree);
+                    activeTrees.push(tree);
+                }
+            }
+
+            scene.add(chunkGroup);
+            chunks.set(chunkKey, chunkGroup);
+        }
+
+        function updateChunks() {
+            const playerX = camera.position.x;
+            const playerZ = camera.position.z;
+
+            const currentChunkX = Math.floor(playerX / CHUNK_SIZE);
+            const currentChunkZ = Math.floor(playerZ / CHUNK_SIZE);
+
+            const r = Math.ceil((isMobile ? 60 : VIEW_DISTANCE) / CHUNK_SIZE); // Меньше чанков на мобильном
+
+            for (let x = -r; x <= r; x++) {
+                for (let z = -r; z <= r; z++) {
+                    spawnChunk(currentChunkX + x, currentChunkZ + z);
+                }
+            }
+
+            for (let [key, val] of chunks.entries()) {
+                const [cx, cz] = key.split(',').map(Number);
+                if (Math.abs(cx - currentChunkX) > r + 1 || Math.abs(cz - currentChunkZ) > r + 1) {
+                    scene.remove(val);
+                    val.traverse(child => {
+                        if (child.isMesh) child.geometry.dispose();
+                    });
+                    chunks.delete(key);
+                }
+            }
+        }
+
+        // --- Двойное управление (Мышь + Сенсор) ---
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+
+        // 1. Для ПК (Движение мыши)
+        if (!isMobile) {
+            document.addEventListener('mousemove', (e) => {
+                const mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                const mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+                targetRotationY = -mouseX * Math.PI * 0.25;
+                targetRotationX = mouseY * Math.PI * 0.1;
+            });
+        }
+        // 2. Для Телефонов (Свайпы по экрану)
+        else {
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+
+                const deltaX = touchX - touchStartX;
+                const deltaY = touchY - touchStartY;
+
+                // Чувствительность вращения на телефоне
+                targetRotationY += deltaX * 0.007;
+                targetRotationX += deltaY * 0.005;
+
+                // Ограничиваем взгляд вверх/вниз
+                targetRotationX = Math.max(-Math.PI/4, Math.min(Math.PI/4, targetRotationX));
+
+                touchStartX = touchX;
+                touchStartY = touchY;
+            }, { passive: true });
+        }
+
+        // --- Анимационный цикл ---
+        const clock = new THREE.Clock();
+        let stepCycle = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(clock.getDelta(), 0.1); // Защита от резких скачков лагов
+            const time = clock.getElapsedTime();
+
+            // Поворот камеры
+            camera.rotation.y += (targetRotationY - camera.rotation.y) * 0.05;
+            camera.rotation.x += (targetRotationX - camera.rotation.x) * 0.05;
+            camera.rotation.z = 0;
+
+            // Движение вперед по оси Z
+            camera.position.z -= WALK_SPEED * delta;
+
+            // Автоматическое удержание на тропинке
+            const targetX = Math.sin(camera.position.z * 0.03) * 15 + Math.cos(camera.position.z * 0.01) * 5;
+            camera.position.x += (targetX - camera.position.x) * 0.02;
+
+            // Покачивание камеры (шаги)
+            stepCycle += WALK_SPEED * delta * 1.5;
+            camera.position.y = 1.7 + Math.sin(stepCycle) * 0.07;
+            camera.position.x += Math.cos(stepCycle * 0.5) * 0.025;
+
+            // Привязка солнца к игроку
+            sunLight.position.x = camera.position.x + 60;
+            sunLight.position.z = camera.position.z - 60;
+            sunLight.target = camera;
+
+            // Качание деревьев ветром (только близкие деревья для оптимизации мобилок)
+            const maxWindDist = isMobile ? 40 : 80;
+            activeTrees.forEach((tree, idx) => {
+                const dist = tree.position.distanceTo(camera.position);
+                if (dist < maxWindDist) {
+                    const wind = Math.sin(time + idx) * 0.015;
+                    if(tree.children[1]) tree.children[1].rotation.z = wind;
+                    if(tree.children[2]) tree.children[2].rotation.z = wind * 1.3;
+                }
+            });
+
+            // Движение пола за игроком
+            floor.position.set(camera.position.x, 0, camera.position.z);
+
+            updateChunks();
+            renderer.render(scene, camera);
+        }
+
+        // --- Автоподстройка экрана ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

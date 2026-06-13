@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Вормикс Mobile</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background:#1a1a2e; font-family:Arial,sans-serif; color:#fff;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  #wrap { position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center; }
+  canvas { display:block; background:linear-gradient(#7ec0ee,#b0e0ff); }
+
+  /* ===== СЕНСОРНЫЕ КНОПКИ ===== */
+  .btn {
+    position:absolute; border-radius:50%;
+    background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.4);
+    color:#fff; font-size:24px; font-weight:bold;
+    display:flex; justify-content:center; align-items:center;
+    touch-action:none; z-index:10;
+  }
+  .btn:active, .btn.pressed { background:rgba(255,204,0,0.4); border-color:#ffcc00; }
+
+  #btnL  { left:15px;  bottom:20px; width:60px; height:60px; }
+  #btnR  { left:90px;  bottom:20px; width:60px; height:60px; }
+  #btnJ  { left:52px;  bottom:95px; width:55px; height:55px; font-size:20px; }
+
+  #btnUp   { right:90px; bottom:95px; width:55px; height:55px; }
+  #btnDown { right:90px; bottom:20px; width:55px; height:55px; }
+  #btnFire {
+    right:12px; bottom:45px; width:72px; height:72px;
+    background:rgba(255,60,60,0.3); border-color:#ff5555; font-size:30px;
+  }
+  #btnFire:active, #btnFire.pressed { background:rgba(255,60,60,0.6); }
+
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <!-- кнопки движения -->
+  <div class="btn" id="btnL">◀</div>
+  <div class="btn" id="btnR">▶</div>
+  <div class="btn" id="btnJ">⤴</div>
+  <!-- прицел и огонь -->
+  <div class="btn" id="btnUp">▲</div>
+  <div class="btn" id="btnDown">▼</div>
+  <div class="btn" id="btnFire">🔥</div>
+</div>
+<script>
+const cvs = document.getElementById('game'), ctx = cvs.getContext('2d');
+const W = 900, H = 500, G = 0.25;
+cvs.width = W; cvs.height = H;
+
+// ===== АДАПТАЦИЯ ПОД ЭКРАН =====
+function resize() {
+  const sw = innerWidth, sh = innerHeight;
+  const scale = Math.min(sw/W, sh/H);
+  cvs.style.width = (W*scale)+'px';
+  cvs.style.height = (H*scale)+'px';
+}
+addEventListener('resize', resize);
+addEventListener('orientationchange', () => setTimeout(resize, 200));
+resize();
+
+// ===== СОСТОЯНИЯ =====
+let state = 'menu';
+let vsBot = true, botSkill = 0.7;
+
+// --- Земля ---
+const terrain = document.createElement('canvas');
+terrain.width = W; terrain.height = H;
+const tctx = terrain.getContext('2d');
+
+function genTerrain() {
+  tctx.clearRect(0,0,W,H);
+  tctx.fillStyle = '#5a3d1e';
+  tctx.beginPath(); tctx.moveTo(0,H);
+  let y = H*0.6;
+  for (let x=0; x<=W; x+=10) {
+    y += (Math.random()-0.5)*30;
+    y = Math.max(H*0.35, Math.min(H*0.85, y));
+    tctx.lineTo(x,y);
+  }
+  tctx.lineTo(W,H); tctx.closePath(); tctx.fill();
+  tctx.strokeStyle = '#3a8a3a'; tctx.lineWidth = 6; tctx.stroke();
+}
+
+function solid(x,y) {
+  if (x<0||x>=W||y>=H) return y>=H;
+  if (y<0) return false;
+  return tctx.getImageData(x|0,y|0,1,1).data[3] > 50;
+}
+
+function explode(x,y,r) {
+  tctx.save();
+  tctx.globalCompositeOperation = 'destination-out';
+  tctx.beginPath(); tctx.arc(x,y,r,0,7); tctx.fill();
+  tctx.restore();
+  if (navigator.vibrate) navigator.vibrate(80); // вибрация на телефоне!
+  worms.forEach(w => {
+    if (!w.alive) return;
+    const d = Math.hypot(w.x-x, w.y-y);
+    if (d < r+15) {
+      w.hp -= Math.round(Math.max(10, 50*(1-d/(r+15))));
+      w.vx += (w.x-x)/(d||1) * 6; w.vy = -4;
+      if (w.hp <= 0) { w.hp = 0; w.alive = false; }
+    }
+  });
+}
+
+class Worm {
+  constructor(x, color, name, isBot) {
+    this.x=x; this.y=50; this.vx=0; this.vy=0;
+    this.hp=100; this.alive=true; this.color=color; this.name=name;
+    this.angle=-Math.PI/4; this.dir=1; this.isBot=isBot;
+  }
+  update() {
+    if (!this.alive) return;
+    this.vy += G;
+    this.x += this.vx; this.y += this.vy;
+    this.vx *= 0.9;
+    while (solid(this.x, this.y+10) && this.y > 0) { this.y--; this.vy=0; }
+    if (this.x<10) this.x=10; if (this.x>W-10) this.x=W-10;
+    if (this.y > H+50) { this.alive=false; this.hp=0; }
+  }
+  onGround() { return solid(this.x, this.y+11); }
+  draw() {
+    if (!this.alive) return;
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, 7); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(this.x+3*this.dir, this.y-4, 3, 0, 7); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(this.x+4*this.dir, this.y-4, 1.5, 0, 7); ctx.fill();
+    if (this.isBot) { ctx.fillStyle='#222'; ctx.fillRect(this.x-10, this.y-7, 20, 4); }
+    ctx.fillStyle = this.hp>40 ? '#4f4' : '#f44';
+    ctx.fillRect(this.x-15, this.y-25, 30*this.hp/100, 5);
+    ctx.strokeStyle='#000'; ctx.strokeRect(this.x-15, this.y-25, 30, 5);
+  }
+}
+
+let worms = [], turn = 0, projectile = null, power = 0, charging = false;
+let wind = 0, gameOver = false;
+let botTimer = 0, botPlan = null, botThinking = false;
+
+function startGame() {
+  state = 'play';
+  genTerrain();
+  worms = [
+    new Worm(150, '#ff5555', 'Ты', false),
+    new Worm(750, '#5588ff', vsBot ? '🤖 Бот' : 'Синий', vsBot)
+  ];
+  worms.forEach(w => { while(!solid(w.x,w.y+10) && w.y<H) w.y++; w.y-=5; });
+  turn = 0; projectile = null; charging = false; gameOver = false;
+  wind = (Math.random()-0.5)*0.06;
+  botPlan = null; botThinking = false; botTimer = 0;
+  updateButtons();
+}
+
+// ===== ИИ БОТА =====
+function simulateShot(sx, sy, angle, pow, target) {
+  let x = sx + Math.cos(angle)*15, y = sy + Math.sin(angle)*15;
+  let vx = Math.cos(angle)*pow*0.25, vy = Math.sin(angle)*pow*0.25;
+  let best = Infinity;
+  for (let i=0; i<400; i++) {
+    vy += G; vx += wind;
+    x += vx; y += vy;
+    const d = Math.hypot(x-target.x, y-target.y);
+    if (d < best) best = d;
+    if (solid(x,y) || x<-50 || x>W+50 || y>H) break;
+  }
+  return best;
+}
+
+function botThink() {
+  const bot = worms[turn];
+  const target = worms.find(w => w !== bot && w.alive);
+  if (!target) return null;
+  let best = { dist: Infinity, angle: 0, power: 50 };
+  const baseDir = target.x > bot.x ? 1 : -1;
+  for (let deg = -85; deg <= 30; deg += 4) {
+    for (let pow = 20; pow <= 100; pow += 8) {
+      const a = baseDir === 1 ? deg*Math.PI/180 : Math.PI - deg*Math.PI/180;
+      const d = simulateShot(bot.x, bot.y, a, pow, target);
+      if (d < best.dist) best = { dist: d, angle: a, power: pow };
+    }
+  }
+  const err = (1 - botSkill);
+  best.angle += (Math.random()-0.5) * err * 0.5;
+  best.power += (Math.random()-0.5) * err * 30;
+  best.power = Math.max(15, Math.min(100, best.power));
+  bot.dir = baseDir;
+  bot.angle = baseDir === 1 ? Math.atan2(Math.sin(best.angle), Math.cos(best.angle))
+                            : Math.atan2(Math.sin(best.angle), -Math.cos(best.angle));
+  return best;
+}
+
+function botTurn() {
+  const bot = worms[turn];
+  if (!bot.isBot || projectile || gameOver) return;
+  botTimer++;
+  if (botTimer === 30) { botThinking = true; botPlan = botThink(); }
+  if (botTimer > 40 && botTimer < 70 && botPlan && botPlan.dist > 200) bot.vx = bot.dir * 1.2;
+  if (botTimer === 80) botPlan = botThink();
+  if (botTimer > 90 && botPlan) {
+    charging = true;
+    power = Math.min(botPlan.power, power + 1.5);
+    if (power >= botPlan.power) {
+      charging = false;
+      projectile = {
+        x: bot.x + Math.cos(botPlan.angle)*15,
+        y: bot.y + Math.sin(botPlan.angle)*15,
+        vx: Math.cos(botPlan.angle)*power*0.25,
+        vy: Math.sin(botPlan.angle)*power*0.25
+      };
+      power = 0; botPlan = null; botThinking = false; botTimer = 0;
+    }
+  }
+}
+
+// ===== УПРАВЛЕНИЕ: общее состояние кнопок =====
+const input = { left:false, right:false, jump:false, up:false, down:false, fire:false };
+
+// --- Сенсорные кнопки ---
+function bindBtn(id, prop) {
+  const el = document.getElementById(id);
+  const on  = e => { e.preventDefault(); input[prop] = true;  el.classList.add('pressed'); };
+  const off = e => { e.preventDefault(); input[prop] = false; el.classList.remove('pressed'); };
+  el.addEventListener('touchstart', on, {passive:false});
+  el.addEventListener('touchend', off, {passive:false});
+  el.addEventListener('touchcancel', off, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+}
+bindBtn('btnL','left'); bindBtn('btnR','right'); bindBtn('btnJ','jump');
+bindBtn('btnUp','up'); bindBtn('btnDown','down'); bindBtn('btnFire','fire');
+
+// --- Клавиатура (для ПК) ---
+addEventListener('keydown', e => {
+  if (e.code==='Space') e.preventDefault();
+  if (e.code==='KeyA') input.left = true;
+  if (e.code==='KeyD') input.right = true;
+  if (e.code==='KeyW') input.jump = true;
+  if (e.code==='ArrowUp') input.up = true;
+  if (e.code==='ArrowDown') input.down = true;
+  if (e.code==='Space') input.fire = true;
+});
+addEventListener('keyup', e => {
+  if (e.code==='KeyA') input.left = false;
+  if (e.code==='KeyD') input.right = false;
+  if (e.code==='KeyW') input.jump = false;
+  if (e.code==='ArrowUp') input.up = false;
+  if (e.code==='ArrowDown') input.down = false;
+  if (e.code==='Space') input.fire = false;
+});
+
+// --- Тап по канвасу = выбор в меню ---
+function canvasPoint(e) {
+  const r = cvs.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x:(t.clientX-r.left)/r.width*W, y:(t.clientY-r.top)/r.height*H };
+}
+function menuTap(e) {
+  e.preventDefault();
+  const p = canvasPoint(e);
+  if (state === 'menu') {
+    if (p.y > 220 && p.y < 290) { vsBot = true; state = 'difficulty'; }
+    if (p.y > 290 && p.y < 360) { vsBot = false; startGame(); }
+  } else if (state === 'difficulty') {
+    if (p.y > 200 && p.y < 265) { botSkill = 0.4; startGame(); }
+    if (p.y > 265 && p.y < 325) { botSkill = 0.7; startGame(); }
+    if (p.y > 325 && p.y < 390) { botSkill = 0.95; startGame(); }
+  } else if (state === 'play' && gameOver) {
+    state = 'menu'; updateButtons();
+  }
+}
+cvs.addEventListener('touchstart', menuTap, {passive:false});
+cvs.addEventListener('mousedown', menuTap);
+
+// Скрыть кнопки в меню
+function updateButtons() {
+  const show = (state === 'play' && !gameOver);
+  document.querySelectorAll('.btn').forEach(b => b.classList.toggle('hidden', !show));
+}
+updateButtons();
+
+// ===== ВЫСТРЕЛ =====
+let wasFire = false;
+function fire() {
+  charging = false;
+  const w = worms[turn];
+  const a = w.dir===1 ? w.angle : Math.PI - w.angle;
+  projectile = {
+    x: w.x + Math.cos(a)*15, y: w.y + Math.sin(a)*15,
+    vx: Math.cos(a)*power*0.25, vy: Math.sin(a)*power*0.25
+  };
+  power = 0;
+}
+
+function nextTurn() {
+  turn = (turn+1) % 2;
+  if (!worms[turn].alive) turn = (turn+1)%2;
+  wind = (Math.random()-0.5)*0.06;
+  botTimer = 0; botPlan = null; botThinking = false;
+}
+
+// ===== ОБНОВЛЕНИЕ =====
+function update() {
+  if (state !== 'play' || gameOver) return;
+  const w = worms[turn];
+
+  if (w.isBot) {
+    botTurn();
+  } else if (!projectile && w.alive) {
+    if (input.left)  { w.vx=-1.5; w.dir=-1; }
+    if (input.right) { w.vx=1.5;  w.dir=1; }
+    if (input.jump && w.onGround()) w.vy = -5;
+    if (input.up)   w.angle = Math.max(-Math.PI/2, w.angle-0.03);
+    if (input.down) w.angle = Math.min(Math.PI/4, w.angle+0.03);
+    // заряд: удерживаешь 🔥 — копится сила, отпустил — выстрел
+    if (input.fire && !charging) { charging = true; power = 0; }
+    if (charging && input.fire) power = Math.min(100, power+1.5);
+    if (charging && !input.fire) fire();
+    wasFire = input.fire;
+  }
+
+  worms.forEach(w => w.update());
+
+  if (projectile) {
+    projectile.vy += G;
+    projectile.vx += wind;
+    projectile.x += projectile.vx;
+    projectile.y += projectile.vy;
+    const p = projectile;
+    let hit = solid(p.x, p.y);
+    worms.forEach(ww => { if (ww.alive && Math.hypot(ww.x-p.x,ww.y-p.y)<12 && ww!==worms[turn]) hit=true; });
+    if (hit) { explode(p.x, p.y, 35); projectile=null; nextTurn(); }
+    else if (p.x<-50||p.x>W+50||p.y>H) { projectile=null; nextTurn(); }
+  }
+
+  if (worms.filter(w=>w.alive).length <= 1) { gameOver = true; updateButtons(); }
+}
+
+// ===== ОТРИСОВКА =====
+function drawMenuButton(text, y, color) {
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  const bw = 420, bh = 55, bx = W/2-bw/2;
+  ctx.beginPath();
+  ctx.roundRect(bx, y, bw, bh, 12);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = color; ctx.font = 'bold 26px Arial'; ctx.textAlign='center';
+  ctx.fillText(text, W/2, y+37);
+}
+
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  if (state === 'menu') {
+    ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.fillStyle='#ffcc00'; ctx.font='bold 50px Arial';
+    ctx.fillText('WARMIX', W/2, 150);
+    drawMenuButton('🤖  Против бота', 225, '#ffcc00');
+    drawMenuButton('👥  Вдвоём на одном экране', 295, '#88ccff');
+    ctx.fillStyle='#888'; ctx.font='16px Arial';
+    ctx.fillText('Нажми на кнопку', W/2, 420);
+    ctx.textAlign='left';
+    return;
+  }
+  if (state === 'difficulty') {
+    ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.fillStyle='#ffcc00'; ctx.font='bold 40px Arial';
+    ctx.fillText('Сложность бота', W/2, 140);
+    drawMenuButton('🙂  Лёгкий', 205, '#44ff44');
+    drawMenuButton('😐  Средний', 268, '#ffff44');
+    drawMenuButton('💀  Снайпер', 331, '#ff4444');
+    ctx.textAlign='left';
+    return;
+  }
+
+  ctx.fillStyle='#ffdd55'; ctx.beginPath(); ctx.arc(80,70,30,0,7); ctx.fill();
+  ctx.drawImage(terrain,0,0);
+  worms.forEach(w=>w.draw());
+
+  const w = worms[turn];
+  if (!projectile && w.alive && !gameOver) {
+    const a = w.dir===1 ? w.angle : Math.PI - w.angle;
+    ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(w.x,w.y);
+    ctx.lineTo(w.x+Math.cos(a)*60, w.y+Math.sin(a)*60);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#ff0';
+    ctx.beginPath(); ctx.arc(w.x+Math.cos(a)*60, w.y+Math.sin(a)*60, 4,0,7); ctx.fill();
+  }
+  if (projectile) {
+    ctx.fillStyle='#222';
+    ctx.beginPath(); ctx.arc(projectile.x, projectile.y, 5,0,7); ctx.fill();
+  }
+  if (charging) {
+    ctx.fillStyle='#333'; ctx.fillRect(W/2-100, H-30, 200, 18);
+    ctx.fillStyle = power>70 ? '#f33' : '#3f3';
+    ctx.fillRect(W/2-100, H-30, power*2, 18);
+    ctx.strokeStyle='#fff'; ctx.strokeRect(W/2-100, H-30, 200, 18);
+  }
+  ctx.fillStyle='#fff'; ctx.font='bold 18px Arial';
+  ctx.fillText('Ход: ' + w.name, 20, 28);
+  ctx.fillText('Ветер: ' + (wind>0?'→':'←') + ' ' + Math.abs(wind*100).toFixed(0), 20, 52);
+  if (botThinking && w.isBot && !projectile) {
+    ctx.fillStyle='#ffcc00';
+    ctx.fillText('🤖 Бот целится...', 20, 78);
+  }
+
+  if (gameOver) {
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ffcc00'; ctx.font='bold 44px Arial'; ctx.textAlign='center';
+    const alive = worms.find(w=>w.alive);
+    ctx.fillText(alive ? '🏆 Победил ' + alive.name + '!' : 'Ничья!', W/2, H/2);
+    ctx.font='22px Arial'; ctx.fillStyle='#fff';
+    ctx.fillText('Нажми на экран — в меню', W/2, H/2+45);
+    ctx.textAlign='left';
+  }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
