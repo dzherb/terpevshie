@@ -34,7 +34,7 @@
         fetchpriority="high"
         id="cover-img"
         src="./cover.webp"
-        alt="обложка композиции"
+        alt="обложка релиза"
         onerror="this.alt='не удалось загрузить изображение...';"
       >
 
@@ -75,7 +75,7 @@
         if (currentStep >= steps) {
           clearInterval(fade);
           audio.pause();
-          audio.volume = initialVolume; // сброс
+          audio.volume = initialVolume;
         }
       }, stepTime);
     }
@@ -86,7 +86,7 @@
           console.log('Autoplay failed:', err);
         });
       } else {
-        fadeOutAudio(audio, 500);  // 1 секунда затухания
+        fadeOutAudio(audio, 500);
       }
     });
 
