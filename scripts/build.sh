@@ -7,7 +7,7 @@ SOURCE_DIR="pages"
 SOURCE_EXCLUDE_DIR="common/jinja"
 BUILD_DIR="dist"
 
-rsync -a $SOURCE_DIR/ $BUILD_DIR/
+rsync -a --delete $SOURCE_DIR/ $BUILD_DIR/
 
 cd "$BUILD_DIR"
 

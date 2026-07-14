@@ -1,0 +1,164 @@
+{% extends '../../common/jinja/layouts/fog.jinja2' %}
+{% set exclude_navbar = true %}
+
+{% block main %}
+  <div id="typewriter"></div>
+{% endblock %}
+
+{% block script %}
+  {{ super() }}
+  <script>
+    // --- утилиты ---
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+const rand = (a, b) => a + Math.random() * (b - a);
+const randi = (a, b) => Math.floor(rand(a, b + 1));
+
+// QWERTY и ЙЦУКЕН — соседи считаются по позициям в рядах
+const layouts = {
+  en: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
+  ru: ["йцукенгшщзхъ", "фывапролджэ", "ячсмитьбю"]
+};
+
+function neighborsForChar(ch) {
+  const lower = ch.toLowerCase();
+  for (const rows of Object.values(layouts)) {
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      const c = row.indexOf(lower);
+      if (c !== -1) {
+        const n = new Set();
+        const push = (rr, cc) => {
+          if (rr >= 0 && rr < rows.length) {
+            const row2 = rows[rr];
+            if (cc >= 0 && cc < row2.length) n.add(row2[cc]);
+          }
+        };
+        // по горизонтали
+        push(r, c - 1); push(r, c + 1);
+        // вертикаль/диагонали
+        push(r - 1, c); push(r - 1, c - 1); push(r - 1, c + 1);
+        push(r + 1, c); push(r + 1, c - 1); push(r + 1, c + 1);
+
+        return Array.from(n);
+      }
+    }
+  }
+  return []; // нет соседей — вернём пусто
+}
+
+function randomNeighbor(ch) {
+  const list = neighborsForChar(ch);
+  if (!list.length) return ch;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  return ch === ch.toUpperCase() ? pick.toUpperCase() : pick;
+}
+
+// --- основной эффект ---
+async function typeWithHumanMistakes(el, text, opts = {}) {
+  const {
+    minDelay = 40,        // задержка между символами
+    maxDelay = 140,
+    backspaceMin = 40,    // скорость стирания
+    backspaceMax = 140,
+    mistakeChance = 0.03, // вероятность опечатки на символ
+    delayFixMin = 0,      // сколько символов печатаем ПОСЛЕ ошибки прежде чем заметим её
+    delayFixMax = 3,
+    allowMistake = ch => /\S/.test(ch) // не ошибаемся на пробелах и т.п.
+  } = opts;
+
+  el.textContent = "";
+
+  // i — «правильная» позиция в исходной строке
+  let i = 0;
+
+  // если есть активная ошибка — храним её состояние
+  // { pos: индекс символа-ошибки в правильной строке,
+  //   outPos: позиция ошибки в выведенном тексте,
+  //   after: сколько символов ещё напечатать до фикса }
+  let mistake = null;
+
+  while (i < text.length) {
+    // если пора чинить ошибку — стираем хвост до места ошибки
+    if (mistake && mistake.after <= 0) {
+      const toDelete = el.textContent.length - mistake.outPos;
+      for (let k = 0; k < toDelete; k++) {
+        el.textContent = el.textContent.slice(0, -1);
+        await wait(rand(backspaceMin, backspaceMax));
+      }
+      // возвращаемся к позиции ошибки и печатаем заново корректно
+      i = mistake.pos;
+      mistake = null;
+      continue;
+    }
+
+    await wait(rand(minDelay, maxDelay));
+
+    const ch = text[i];
+
+    // создаём опечатку?
+    if (!mistake && allowMistake(ch) && Math.random() < mistakeChance) {
+      const wrong = randomNeighbor(ch);
+      el.textContent += wrong;
+
+      // фикс будем откладывать на 0..3 «правильных» символа
+      mistake = {
+        pos: i,                          // где в исходной строке была ошибка
+        outPos: el.textContent.length - 1, // где в DOM стоит ошибочный символ
+        after: randi(delayFixMin, delayFixMax)
+      };
+
+      i++; // «мысленно» продвигаемся дальше по исходной строке
+      continue;
+    }
+
+    // обычная печать правильного символа
+    el.textContent += ch;
+    i++;
+
+    // если ошибка активна — отсчитываем, сколько символов напечатали после неё
+    if (mistake) mistake.after--;
+  }
+
+  // Если дошли до конца, но ошибка ещё не исправлена — исправим сейчас
+  if (mistake) {
+    const toDelete = el.textContent.length - mistake.outPos;
+    for (let k = 0; k < toDelete; k++) {
+      el.textContent = el.textContent.slice(0, -1);
+      await wait(rand(backspaceMin, backspaceMax));
+    }
+    i = mistake.pos;
+    mistake = null;
+
+    // допечатываем остаток корректно
+    while (i < text.length) {
+      await wait(rand(minDelay, maxDelay));
+      el.textContent += text[i++];
+    }
+  }
+}
+
+typeWithHumanMistakes(
+  document.querySelector('#typewriter'),
+  'Это строка с естественным набором и редкими опечатками.',
+  { mistakeChance: 0.07 }
+);
+  </script>
+{% endblock %}
+
+<style>
+  {% block extra_styles %}
+    #typewriter {
+      white-space: pre;
+      display: inline-block;
+      {#border-right: 2px solid white;#}
+      animation: blink 0.7s infinite step-start;
+    }
+
+    @keyframes blink {
+      50% {
+        border-color: transparent;
+      }
+    }
+  {% endblock %}
+</style>
+
