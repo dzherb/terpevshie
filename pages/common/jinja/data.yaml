@@ -9,13 +9,18 @@ sm_breakpoint: 600
 
 # Для JSON-LD (MusicGroup). sameAs — профили группы на других площадках:
 # чем их больше, тем увереннее поисковик связывает сайт с исполнителем.
-# TODO: добавить страницу артиста на Яндекс.Музыке, VK, Apple Music и т.д.
+# URL только в ASCII: JSON-LD читают машины, кириллицу в путях лучше
+# держать percent-encoded (это и есть канонический вид ссылки).
 band:
   name: потерпевшие
   description: анти-музыкальный анти-коллектив
+  genre: альтернатива
   email: info@terpevshie.ru
   same_as:
     - https://t.me/terpevshie
+    - https://music.yandex.ru/artist/21189865
+    - https://open.spotify.com/artist/7bpZh2PjwEBQkHghQuUI5w
+    - https://music.apple.com/ru/artist/%D0%BF%D0%BE%D1%82%D0%B5%D1%80%D0%BF%D0%B5%D0%B2%D1%88%D0%B8%D0%B5/1719526251
 
 # Свежие сверху не нужны — releases/index.jinja2 сам группирует по годам.
 releases:
