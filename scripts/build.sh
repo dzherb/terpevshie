@@ -5,6 +5,7 @@ THREADS="${1:-4}"
 
 SOURCE_DIR="pages"
 SOURCE_EXCLUDE_DIR="common/jinja"
+DATA_FILE="$SOURCE_EXCLUDE_DIR/data.yaml"
 BUILD_DIR="dist"
 
 rsync -a --delete $SOURCE_DIR/ $BUILD_DIR/
@@ -19,7 +20,7 @@ process_file() {
   out="$dir/$base.html"
 
   echo "⚙️  Rendering: $file → $out"
-  if ! minijinja-cli "$file" > "$out"; then
+  if ! minijinja-cli "$file" "$DATA_FILE" > "$out"; then
     echo "❌  Failed to render $file"
     return 1
   fi
@@ -37,6 +38,7 @@ process_file() {
 }
 
 export -f process_file
+export DATA_FILE
 
 echo "🔍 Searching for .jinja2 files..."
 find . -path "./$SOURCE_EXCLUDE_DIR" -prune -o -type f -name "*.jinja2" -print \

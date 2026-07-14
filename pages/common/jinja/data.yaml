@@ -1,0 +1,27 @@
+# Глобальный контекст для всех шаблонов.
+# Передаётся в minijinja-cli вторым аргументом (build.sh и dev_server).
+# В dist не попадает: каталог common/jinja вырезается при сборке.
+
+telegram_link: https://t.me/terpevshie
+sm_breakpoint: 600
+
+# Свежие сверху не нужны — releases/index.jinja2 сам группирует по годам.
+releases:
+  - title: исправить
+    year: 2023
+    link: https://music.yandex.ru/album/24869109
+    external: true
+  - title: причины
+    year: 2023
+    link: https://music.yandex.ru/album/28555354
+    external: true
+  - title: что
+    year: 2024
+    link: https://music.yandex.ru/album/31123244
+    external: true
+  - title: слово
+    year: 2024
+    link: /releases/word
+  - title: построчно
+    year: 2025
+    link: /releases/line-by-line

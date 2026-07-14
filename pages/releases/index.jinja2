@@ -5,14 +5,6 @@
   потерпевшие | релизы
 {% endblock %}
 
-{% set releases = [
-  {"title": "исправить", "link": "https://music.yandex.ru/album/24869109", "year": 2023, "_blank": true},
-  {"title": "причины", "link": "https://music.yandex.ru/album/28555354", "year": 2023, "_blank": true},
-  {"title": "что", "link": "https://music.yandex.ru/album/31123244", "year": 2024, "_blank": true},
-  {"title": "слово", "link": "/releases/word", "year": 2024},
-  {"title": "построчно", "link": "/releases/line-by-line", "year": 2025},
-] %}
-
 {% block main %}
   <div class="releases-container">
     {% for year, releases in releases|groupby('year')|reverse %}
@@ -22,7 +14,7 @@
           {% for release in releases|reverse %}
             <li>
               <a
-                {% if release._blank %}target="_blank"{% endif %}
+                {% if release.external %}target="_blank"{% endif %}
                 href="{{ release.link }}"
               >
                 {{ release.title }}

@@ -22,6 +22,7 @@ import (
 const (
 	renderCmd            = "minijinja-cli"
 	notFoundTemplatePath = "404.jinja2"
+	dataFilePath         = "common/jinja/data.yaml"
 )
 
 var (
@@ -136,7 +137,7 @@ func pagesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderTemplate(path string) ([]byte, error) {
-	cmd := exec.Command(renderCmd, path)
+	cmd := exec.Command(renderCmd, path, filepath.Join(templateDir, dataFilePath))
 
 	out, err := cmd.Output()
 	if err != nil {
