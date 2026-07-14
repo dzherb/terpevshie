@@ -3,16 +3,17 @@
 {% block head %}
   {{ super() }}
   {% include '../includes/font_old_standard.html' %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
 {% endblock %}
 
 {# telegram_link, sm_breakpoint и releases приходят из common/jinja/data.yaml #}
 
 {# Components #}
 {% import '../components/navbar.jinja2' as navbar %}
+{% import '../components/fog.jinja2' as fog %}
 
 {% block content %}
+  {{ fog.html() }}
+
   {% if not exclude_navbar %}
     {{ navbar.html() }}
   {% endif %}
@@ -23,23 +24,7 @@
 {% endblock %}
 
 {% block script %}
-  <script>
-    VANTA.FOG({
-      el: "body",
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: false,
-      minHeight: 200.00,
-      minWidth: 200.00,
-      highlightColor: 0x0,
-      midtoneColor: 0xb1b1b1,
-      lowlightColor: 0x9d9d9d,
-      baseColor: 0x414141,
-      blurFactor: 0.48,
-      speed: 0.00,
-      zoom: 1.80
-    })
-  </script>
+  {{ fog.script() }}
 {% endblock %}
 
 {% block style %}
@@ -50,6 +35,8 @@
     {% if not exclude_navbar %}
       {{ navbar.styles() }}
     {% endif %}
+
+    {{ fog.styles() }}
 
     body {
       min-height: 100vh;
