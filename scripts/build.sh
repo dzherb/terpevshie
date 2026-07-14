@@ -8,11 +8,13 @@ SOURCE_EXCLUDE_DIR="common/jinja"
 DATA_FILE="$SOURCE_EXCLUDE_DIR/data.yaml"
 BUILD_DIR="dist"
 
+MINIFIER="html-minifier-terser@7.2.0"
+
 rsync -a --delete $SOURCE_DIR/ $BUILD_DIR/
 
 cd "$BUILD_DIR"
 
-process_file() {
+render_file() {
   local file="$1"
   local dir base out page_path
   dir=$(dirname "$file")
@@ -32,24 +34,15 @@ process_file() {
     return 1
   fi
 
-  echo "⚙️  Minifying: $out"
-  npx --yes html-minifier-terser "$out" \
-    --collapse-whitespace \
-    --remove-comments \
-    --minify-css true \
-    --minify-js true \
-    -o "$out" 2>/dev/null
-
-  rm $file
-  echo "✅  Done: $out"
+  rm "$file"
 }
 
-export -f process_file
+export -f render_file
 export DATA_FILE
 
 echo "🔍 Searching for .jinja2 files..."
 find . -path "./$SOURCE_EXCLUDE_DIR" -prune -o -type f -name "*.jinja2" -print \
-  | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
+  | xargs -P "$THREADS" -n 1 bash -c 'render_file "$0"'
 
 echo "🗺  Generating sitemap.xml..."
 # Пути собранных страниц: ./concerts/index.html → /concerts, ./index.html → /
@@ -64,6 +57,17 @@ minijinja-cli "$SOURCE_EXCLUDE_DIR/sitemap.xml.jinja2" "$DATA_FILE" \
   -D "pages:=[$pages_json]" -o sitemap.xml
 
 rm -r $SOURCE_EXCLUDE_DIR
+
+echo "🗜  Minifying..."
+npx --yes "$MINIFIER" \
+  --input-dir . \
+  --output-dir . \
+  --file-ext html \
+  --collapse-whitespace \
+  --remove-comments \
+  --minify-css true \
+  --minify-js true
+
 find . -name ".DS_Store" -delete
 
 echo "🏁 All done!"

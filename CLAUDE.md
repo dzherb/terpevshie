@@ -16,8 +16,10 @@
 - `make run` — dev-сервер (Go, `dev_server/`): рендерит `.jinja2` на лету,
   live-reload через SSE, отдаёт статику из `pages/`. Порт в логе при старте.
 - `make build` — `scripts/build.sh`: rsync `pages/` → `dist/`, рендер каждого
-  `.jinja2` в `.html`, минификация через `npx html-minifier-terser`, удаление
-  исходников и `common/jinja/` из `dist/`.
+  `.jinja2` в `.html`, генерация `sitemap.xml`, удаление исходников и
+  `common/jinja/` из `dist/`, затем минификация всего каталога одним вызовом
+  `npx html-minifier-terser` (версия запинена в `MINIFIER` в начале скрипта —
+  не убирать пин, иначе сборка однажды поедет сама по себе).
 - `make test` — сборка + `go test` на dev-сервере + `scripts/check_dist.py`:
   проверяет собранный `dist/` (битые локальные ссылки, ровно один экземпляр
   каждого метатега, валидность JSON-LD, sitemap не разъехался со страницами).
