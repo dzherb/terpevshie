@@ -39,10 +39,6 @@
         const float blurFactor = 0.48;
         const float zoom = 1.8;
 
-        // Плотность потоков. У vanta она случайно зависела от devicePixelRatio:
-        // буфер рендерился в CSS-пикселях, а iResolution делился на scale, из-за
-        // чего на ретине координаты доходили до 2.0, а не до 1.0, и туман был
-        // вдвое мельче. Фиксируем этот — ретиновый — масштаб для всех экранов.
         const float detail = 2.0;
         const vec3 baseColor = vec3(0.255);       // #414141
         const vec3 lowlightColor = vec3(0.616);   // #9d9d9d
@@ -67,7 +63,6 @@
         float fbm(vec2 st) {
           float value = 0.0;
           float amplitude = blurFactor;
-          // Поворот между октавами убирает сетчатую регулярность шума
           mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
           for (int i = 0; i < 6; ++i) {
             value += amplitude * noise(st);
@@ -82,8 +77,6 @@
           st.x *= 0.7 * iResolution.x / iResolution.y;
           st *= zoom;
 
-          // Domain warping: шум искажается вторым шумом, тот — третьим.
-          // Отсюда и берутся «течения» вместо статичных клубов.
           vec2 q = vec2(fbm(st), fbm(st + vec2(1.0)));
 
           vec2 drift = vec2(0.15, 0.126);
