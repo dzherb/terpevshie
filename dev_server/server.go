@@ -136,8 +136,36 @@ func pagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// pagePath — канонический URL шаблона, как его увидит прод:
+// pages/concerts/index.jinja2 → /concerts, pages/404.jinja2 → /404.html
+func pagePath(path string) string {
+	rel, err := filepath.Rel(templateDir, path)
+	if err != nil {
+		return "/"
+	}
+
+	dir := filepath.Dir(rel)
+	if dir == "." {
+		dir = ""
+	}
+
+	base := strings.TrimSuffix(filepath.Base(rel), ".jinja2")
+	if base != "index" {
+		return "/" + filepath.Join(dir, base+".html")
+	}
+
+	if dir == "" {
+		return "/"
+	}
+
+	return "/" + dir
+}
+
 func renderTemplate(path string) ([]byte, error) {
-	cmd := exec.Command(renderCmd, path, filepath.Join(templateDir, dataFilePath))
+	cmd := exec.Command(renderCmd, path,
+		filepath.Join(templateDir, dataFilePath),
+		"-D", "page_path="+pagePath(path),
+	)
 
 	out, err := cmd.Output()
 	if err != nil {

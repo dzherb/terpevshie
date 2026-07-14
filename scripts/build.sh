@@ -14,13 +14,20 @@ cd "$BUILD_DIR"
 
 process_file() {
   local file="$1"
-  local dir base out
+  local dir base out page_path
   dir=$(dirname "$file")
   base=$(basename "$file" .jinja2)
   out="$dir/$base.html"
 
+  # Канонический URL страницы: ./concerts/index.jinja2 → /concerts, ./404.jinja2 → /404.html
+  page_path="${dir#.}"
+  if [ "$base" != "index" ]; then
+    page_path="$page_path/$base.html"
+  fi
+  page_path="${page_path:-/}"
+
   echo "⚙️  Rendering: $file → $out"
-  if ! minijinja-cli "$file" "$DATA_FILE" > "$out"; then
+  if ! minijinja-cli "$file" "$DATA_FILE" -D page_path="$page_path" > "$out"; then
     echo "❌  Failed to render $file"
     return 1
   fi

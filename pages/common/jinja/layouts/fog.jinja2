@@ -1,13 +1,8 @@
 {% extends './base.jinja2' %}
 
 {% block head %}
-  <meta property="og:title" content="{{ og_title if og_title else 'потерпевшие'}}">
-  <meta property="og:description" content="{{ og_description if og_description else 'музыка из другого мира'}}">
-  <meta property="og:image" content="https://terpevshie.ru/home/logo.png">
-  <meta property="og:url" content="https://terpevshie.ru">
-  <meta property="og:type" content="website">
+  {{ super() }}
   {% include '../includes/font_old_standard.html' %}
-  {% include '../includes/favicon_tags.html' %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
 {% endblock %}

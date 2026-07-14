@@ -2,6 +2,8 @@
 # Передаётся в minijinja-cli вторым аргументом (build.sh и dev_server).
 # В dist не попадает: каталог common/jinja вырезается при сборке.
 
+site_url: https://terpevshie.ru
+
 telegram_link: https://t.me/terpevshie
 sm_breakpoint: 600
 

@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}потерпевшие{% endblock %}</title>
   {% block head %}
+    {# Дефолты. Страница переопределяет их через og_title / og_description,
+       либо переопределяет весь блок целиком (см. страницы релизов). #}
+    <meta name="description" content="{{ og_description if og_description else 'музыка из другого мира' }}">
+    <link rel="canonical" href="{{ site_url }}{{ page_path }}">
+    <meta property="og:title" content="{{ og_title if og_title else 'потерпевшие' }}">
+    <meta property="og:description" content="{{ og_description if og_description else 'музыка из другого мира' }}">
+    <meta property="og:image" content="{{ site_url }}/common/images/logo.png">
+    <meta property="og:url" content="{{ site_url }}{{ page_path }}">
+    <meta property="og:type" content="website">
     {% include '../includes/favicon_tags.html' %}
   {% endblock %}
   {% include '../includes/analytics.html' %}
