@@ -1,5 +1,7 @@
 {% extends '../../common/jinja/layouts/base.jinja2' %}
 
+{% import '../../common/jinja/components/schema.jinja2' as schema %}
+
 {% block title %}
   потерпевшие - слово
 {% endblock %}
@@ -13,6 +15,7 @@
   <meta property="og:image" content="{{ site_url }}{{ page_path }}/cover.webp">
   <meta property="og:url" content="{{ site_url }}{{ page_path }}">
   <meta property="og:type" content="website">
+  {{ schema.music_album('слово', 2024, 'cover.webp') }}
   {% include '../../common/jinja/includes/font_old_standard.html' %}
   {% include '../../common/jinja/includes/favicon_tags.html' %}
 {% endblock %}

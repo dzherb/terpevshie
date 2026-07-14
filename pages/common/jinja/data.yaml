@@ -7,6 +7,16 @@ site_url: https://terpevshie.ru
 telegram_link: https://t.me/terpevshie
 sm_breakpoint: 600
 
+# Для JSON-LD (MusicGroup). sameAs — профили группы на других площадках:
+# чем их больше, тем увереннее поисковик связывает сайт с исполнителем.
+# TODO: добавить страницу артиста на Яндекс.Музыке, VK, Apple Music и т.д.
+band:
+  name: потерпевшие
+  description: анти-музыкальный анти-коллектив
+  email: info@terpevshie.ru
+  same_as:
+    - https://t.me/terpevshie
+
 # Свежие сверху не нужны — releases/index.jinja2 сам группирует по годам.
 releases:
   - title: исправить

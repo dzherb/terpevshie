@@ -1,6 +1,13 @@
 {% extends './common/jinja/layouts/fog.jinja2' %}
 {% set exclude_navbar = true %}
 
+{% import './common/jinja/components/schema.jinja2' as schema %}
+
+{% block head %}
+  {{ super() }}
+  {{ schema.music_group() }}
+{% endblock %}
+
 {% block main %}
   <h1>потерпевшие.</h1>
   <div id="contents">

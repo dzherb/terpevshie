@@ -4,6 +4,16 @@
   потерпевшие - построчно
 {% endblock %}
 
+{% import '../../common/jinja/components/schema.jinja2' as schema %}
+
+{% set tracks = [
+  {"title": "веришь", "src": "./audio/веришь.mp3"},
+  {"title": "решето", "src": "./audio/решето.mp3"},
+  {"title": "вымысел", "src": "./audio/вымысел.mp3"},
+  {"title": "память", "src": "./audio/память.mp3"},
+  {"title": "когда", "src": "./audio/когда.mp3"},
+] %}
+
 {% block head %}
   <meta name="description"
         content="Слушайте бесплатно альбом &quot;построчно&quot; анти-музыкального анти-коллектива &quot;потерпевшие&quot;. Альбом доступен на всех площадках.">
@@ -13,6 +23,7 @@
   <meta property="og:image" content="{{ site_url }}{{ page_path }}/cover.webp">
   <meta property="og:url" content="{{ site_url }}{{ page_path }}">
   <meta property="og:type" content="website">
+  {{ schema.music_album('построчно', 2025, 'cover.webp', tracks | map(attribute='title')) }}
   {% include '../../common/jinja/includes/font_old_standard.html' %}
   {% include '../../common/jinja/includes/favicon_tags.html' %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js" defer></script>
@@ -60,13 +71,7 @@
       ]) }}
 
       <div id="tracklist">
-        {% set tracks = [
-          {"title": "веришь", "src": "./audio/веришь.mp3"},
-          {"title": "решето", "src": "./audio/решето.mp3"},
-          {"title": "вымысел", "src": "./audio/вымысел.mp3"},
-          {"title": "память", "src": "./audio/память.mp3"},
-          {"title": "когда", "src": "./audio/когда.mp3"},
-        ] %}
+        {# tracks объявлены в начале файла — их же использует JSON-LD в head #}
 
         {% for track in tracks %}
           <div class="track paused" data-src="{{ track.src }}">

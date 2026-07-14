@@ -51,6 +51,18 @@ echo "🔍 Searching for .jinja2 files..."
 find . -path "./$SOURCE_EXCLUDE_DIR" -prune -o -type f -name "*.jinja2" -print \
   | xargs -P "$THREADS" -n 1 bash -c 'process_file "$0"'
 
+echo "🗺  Generating sitemap.xml..."
+# Пути собранных страниц: ./concerts/index.html → /concerts, ./index.html → /
+# 404 и черновики из experimental/ в индекс не отдаём.
+pages=$(find . -type f -name "*.html" -not -name "404.html" \
+  -not -path "./experimental/*" -not -path "./$SOURCE_EXCLUDE_DIR/*" \
+  | sed -e 's|^\.||' -e 's|/index\.html$||' -e 's|^$|/|' \
+  | sort)
+pages_json=$(printf '%s\n' "$pages" | awk 'NF {printf "%s\"%s\"", sep, $0; sep=","}')
+
+minijinja-cli "$SOURCE_EXCLUDE_DIR/sitemap.xml.jinja2" "$DATA_FILE" \
+  -D "pages:=[$pages_json]" -o sitemap.xml
+
 rm -r $SOURCE_EXCLUDE_DIR
 find . -name ".DS_Store" -delete
 

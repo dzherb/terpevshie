@@ -1,0 +1,61 @@
+{# JSON-LD для поисковиков. Данные о группе и релизах — из data.yaml. #}
+
+{% macro music_group() %}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MusicGroup",
+      "name": "{{ band.name }}",
+      "description": "{{ band.description }}",
+      "url": "{{ site_url }}",
+      "image": "{{ site_url }}/common/images/logo.png",
+      "email": "{{ band.email }}",
+      "sameAs": [{% for link in band.same_as %}"{{ link }}"{{ ", " if not loop.last }}{% endfor %}],
+      "album": [
+        {% for release in releases %}
+          {
+            "@type": "MusicAlbum",
+            "name": "{{ release.title }}",
+            "url": "{{ release.link if release.external else site_url ~ release.link }}",
+            "datePublished": "{{ release.year }}"
+          }{{ "," if not loop.last }}
+        {% endfor %}
+      ]
+    }
+  </script>
+{% endmacro %}
+
+{# tracks — список названий песен, для сингла можно не передавать #}
+{% macro music_album(title, year, cover, tracks=[]) %}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MusicAlbum",
+      "name": "{{ title }}",
+      "url": "{{ site_url }}{{ page_path }}",
+      "image": "{{ site_url }}{{ page_path }}/{{ cover }}",
+      "datePublished": "{{ year }}",
+      "byArtist": {
+        "@type": "MusicGroup",
+        "name": "{{ band.name }}",
+        "url": "{{ site_url }}"
+      }
+      {% if tracks %}
+      ,"numTracks": {{ tracks | length }},
+      "track": [
+        {% for track in tracks %}
+          {
+            "@type": "MusicRecording",
+            "name": "{{ track }}",
+            "position": {{ loop.index }},
+            "byArtist": {
+              "@type": "MusicGroup",
+              "name": "{{ band.name }}"
+            }
+          }{{ "," if not loop.last }}
+        {% endfor %}
+      ]
+      {% endif %}
+    }
+  </script>
+{% endmacro %}

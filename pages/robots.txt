@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /experimental/
+
+Sitemap: https://terpevshie.ru/sitemap.xml
