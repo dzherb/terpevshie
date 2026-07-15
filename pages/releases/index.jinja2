@@ -13,12 +13,16 @@
         <ul>
           {% for release in releases|reverse %}
             <li>
-              <a
-                {% if release.external %}target="_blank"{% endif %}
-                href="{{ release.link }}"
-              >
-                {{ release.title }}
-              </a>
+              {% if release.link %}
+                <a
+                  {% if release.external %}target="_blank"{% endif %}
+                  href="{{ release.link }}"
+                >
+                  {{ release.title }}
+                </a>
+              {% else %}
+                <span class="upcoming">{{ release.title }}</span>
+              {% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -51,6 +55,11 @@
       gap: 1rem;
       margin-top: 1rem;
       list-style-type: none;
+    }
+
+    .upcoming {
+      opacity: 0.6;
+      cursor: default;
     }
   {% endblock %}
 </style>
