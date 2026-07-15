@@ -28,7 +28,7 @@
   <main class="font-regular">
     <div id="teaser-card">
       <h1 class="font-bold">МУЗЫКА 2</h1>
-      <p id="release-date" >август 2026</p>
+      <p id="release-date" >август 2026, <a title="телеграм канал" target="_blank" href="{{ telegram_link }}">следите за новостями</a></p>
 
       <div id="play-wrap">
         <svg id="progress-ring" viewBox="0 0 72 72" aria-hidden="true">
@@ -200,6 +200,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 150ms;
+    }
+
+    a:hover {
+      color: #121212;
     }
 
     #teaser-card {
